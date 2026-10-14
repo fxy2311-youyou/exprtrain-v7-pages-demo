@@ -1,0 +1,21 @@
+
+.demo-banner {
+  position: fixed;
+  z-index: 1000;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(92vw, 720px);
+  padding: 9px 16px;
+  border: 2px solid #172554;
+  border-radius: 999px;
+  background: #ffef3b;
+  color: #172554;
+  box-shadow: 4px 4px 0 #172554;
+  font-weight: 800;
+  font-size: 13px;
+  text-align: center;
+}
+@media (max-width: 700px) {
+  .demo-banner { top: 8px; font-size: 11px; padding: 7px 11px; }
+}

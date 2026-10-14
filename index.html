@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>表达宇宙·达达口才训练 · V7-2</title>
+  <meta name="description" content="给 7—12 岁孩子的实时表达练习空间">
+  <meta name="theme-color" content="#FFF9ED">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
+  <link rel="stylesheet" href="style.css?v=20261014-v7-2">
+  <link rel="stylesheet" href="demo.css">
+</head>
+<body>
+  <!-- 主布局：三列 -->
+  <div class="layout">
+    <!-- 左栏：表达分析 -->
+    <aside class="panel-left" id="panel-left">
+      <div class="panel-title">📊 表达分析</div>
+      <p class="panel-helper">你说出的具体词语会亮起来：感受、动作、画面和顺序都能被看见。</p>
+      <div class="stat-row">
+        <span class="stat-label stat-label-emotion">情绪词</span>
+        <span id="stat-emotion" class="stat-value stat-pink">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label stat-label-action">动作词</span>
+        <span id="stat-action" class="stat-value stat-blue">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label stat-label-scene">画面词</span>
+        <span id="stat-scene" class="stat-value stat-green">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label stat-label-sequence">顺序词</span>
+        <span id="stat-sequence" class="stat-value stat-purple">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label stat-label-filler">口头停顿</span>
+        <span id="stat-fillers" class="stat-value stat-orange">0</span>
+      </div>
+      <div class="stat-row stat-row-density">
+        <span class="stat-label">说清楚度</span>
+        <span id="stat-density" class="stat-value stat-green">--</span>
+      </div>
+    </aside>
+
+    <!-- 中间：主内容区 -->
+    <main class="main-area">
+      <!-- 顶部栏 -->
+      <div class="topbar">
+        <div class="topbar-title-group"><button id="topbar-back" class="topbar-back hidden" type="button">← 返回</button><span class="app-title">表达宇宙·达达口才训练 <span class="version-tag">V7-2</span></span></div>
+        <div class="topbar-right">
+          <span id="timer" class="timer">00:00</span>
+          <button id="btn-lang-toggle" class="btn-icon" title="切换中/英" style="font-size:12px;font-weight:700;background:#222;border:1px solid #E5007E;border-radius:4px;padding:2px 6px;color:#E5007E;">ZH</button>
+          <button id="btn-prompt-editor" class="btn-icon" title="训练规则">🎯</button>
+          <button id="btn-settings" class="btn-icon" title="设置">⚙️</button>
+        </div>
+      </div>
+
+      <!-- 儿童版首页：表达探险岛 -->
+      <section class="kids-home" id="kids-home" aria-label="表达探险岛首页">
+        <div class="kids-hero">
+          <div>
+            <p class="eyebrow"><span class="spark-dot"></span> EXPRESS COURT · 表达宇宙·达达 V7-2</p>
+            <h1>把你想说的，<br>打到空中。</h1>
+            <p class="hero-copy">像接住一个球一样，把事情、感觉和想法接起来。今天选一个入口，开口说 3 分钟。</p>
+          </div>
+          <div class="hero-mascot" aria-label="表达球"><span>✦</span><b>●</b></div>
+        </div>
+
+        <div class="kids-mode-tabs" role="tablist" aria-label="练习模式">
+          <button class="kids-mode-tab kids-mode-tab-read is-active" data-kids-mode="read" data-open-task="read" role="tab" aria-selected="false"><span class="mode-index">01</span><span class="mode-icon mode-icon-book">📖</span><span><strong>朗读复述</strong><small>读一篇，再说出记得的两件事</small></span><i>→</i></button>
+          <button class="kids-mode-tab kids-mode-tab-free" data-kids-mode="free" data-open-task="free" role="tab" aria-selected="false"><span class="mode-index">02</span><span class="mode-icon mode-icon-rainbow">🌈</span><span><strong>自由表达</strong><small>从真实生活开口，不背范文</small></span><i>→</i></button>
+          <button class="kids-mode-tab kids-mode-tab-adventure" data-kids-mode="adventure" role="tab" aria-selected="false"><span class="mode-index">03</span><span class="mode-icon mode-icon-rocket">↗</span><span><strong>闯关冒险</strong><small>先说情绪，再讲一件小事</small></span><i>→</i></button>
+        </div>
+
+        <div class="kids-mode-panel" data-kids-panel="adventure" hidden>
+          <div class="adventure-page-back"><button id="adventure-home-back" class="adventure-home-back" type="button">← 返回首页</button></div>
+          <div class="section-heading"><div><span class="section-kicker">闯关冒险 · 下一步</span><h2>先选一座岛，开始闯关</h2></div><div class="adventure-home-actions"><span class="level-pill">Lv.2 小小讲述家</span></div></div>
+          <div id="adventure-islands" class="adventure-islands" aria-label="六座表达场景岛"></div>
+          <div id="adventure-themes" class="adventure-themes" hidden>
+            <div class="adventure-page-back"><button id="adventure-back-islands" class="adventure-back" type="button">← 返回岛屿</button></div>
+            <div class="adventure-subheading"><div><span class="section-kicker">第二步 · 选择主题</span><h3 id="adventure-island-title">校园岛</h3></div></div>
+            <div id="adventure-theme-list" class="adventure-theme-list"></div>
+          </div>
+          <div id="adventure-stage" class="adventure-stage" hidden>
+            <div class="adventure-page-back"><button id="adventure-change-theme" class="adventure-back" type="button">← 返回主题</button></div>
+            <div class="adventure-stage-top"><span id="adventure-stage-badge" class="quest-badge">第 1 关</span></div>
+            <h3 id="adventure-stage-title">先说出三个情感词</h3>
+            <p id="adventure-stage-prompt" class="adventure-stage-prompt"></p>
+            <div id="adventure-emotion-stage" class="adventure-emotion-stage">
+              <div id="adventure-emotion-slots" class="adventure-emotion-slots"><span>词语 1</span><span>词语 2</span><span>词语 3</span></div>
+              <div class="adventure-word-input"><input id="adventure-emotion-input" type="text" placeholder="说完后也可以在这里补充，例如：开心、自豪、激动"><button id="adventure-emotion-mic" type="button">🎤 开始说词语</button></div>
+              <div id="adventure-emotion-hints" class="adventure-hints" hidden><span>想不到时可以想想：</span><button type="button" data-quest-word="开心">开心</button><button type="button" data-quest-word="自豪">自豪</button><button type="button" data-quest-word="紧张">紧张</button><button type="button" data-quest-word="委屈">委屈</button><button type="button" data-quest-word="惊喜">惊喜</button></div>
+              <button id="adventure-emotion-submit" class="adventure-primary" type="button">我说好了，检查一下</button>
+            </div>
+            <div id="adventure-story-stage" class="adventure-story-stage" hidden>
+              <div class="adventure-picked-words"><span>刚刚的情绪词</span><b id="adventure-picked-word-text"></b></div>
+              <textarea id="adventure-story-input" rows="4" placeholder="说一到三句话就可以：发生了什么？为什么会这样？后来怎么样？"></textarea>
+              <div class="adventure-story-actions"><button id="adventure-story-mic" class="adventure-secondary" type="button">🎤 开始说故事</button><button id="adventure-story-submit" class="adventure-primary" type="button">完成这一关</button></div>
+              <p id="adventure-story-feedback" class="adventure-inline-feedback">不用说很长，一到三句话就够了。</p>
+            </div>
+            <div id="adventure-result-stage" class="adventure-result-stage" hidden>
+              <div class="adventure-result-badge">🎉 太棒了，你完成了！</div><div id="adventure-stars" class="adventure-stars" aria-label="本关星级">★★★</div>
+              <p id="adventure-result-feedback">你把一件小事和自己的感受说清楚了。</p><button id="adventure-next" class="adventure-primary" type="button">选择下一关 <span>→</span></button>
+            </div>
+          </div>
+          <dialog id="adventure-result-dialog" class="adventure-result-dialog" aria-labelledby="adventure-result-dialog-title">
+            <div class="adventure-result-dialog-head"><div><span class="section-kicker">本关完成</span><h3 id="adventure-result-dialog-title">先看看你刚刚说了什么</h3></div><button id="adventure-result-dialog-close" class="adventure-dialog-close" type="button" aria-label="关闭">×</button></div>
+            <div class="adventure-dialog-transcript"><span>你刚刚说的内容</span><p id="adventure-result-dialog-story"></p></div>
+            <div class="adventure-dialog-conclusion"><div class="adventure-result-badge">🎉 太棒了，你完成了！</div><div id="adventure-result-dialog-stars" class="adventure-stars" aria-label="本关星级">★★★</div><p id="adventure-result-dialog-feedback"></p></div>
+            <div class="adventure-dialog-actions"><button id="adventure-result-dialog-keep" class="adventure-secondary" type="button">留在本页</button><button id="adventure-result-dialog-next" class="adventure-primary" type="button">选择下一关 <span>→</span></button></div>
+          </dialog>
+        </div>
+
+        <div class="kids-quick-row"><button class="quick-link" data-kids-view="growth"><span>🏅</span>成长档案</button><button class="quick-link" id="kids-paste-link"><span>📋</span>粘贴逐字稿</button></div>
+      </section>
+
+      <!-- 朗读复述：独立于 AI Key 的本地阅读练习 -->
+      <section id="reading-hub" class="reading-hub" hidden aria-label="朗读复述训练">
+        <div class="reading-page-back"><button id="reading-back" class="reading-back" type="button">← 返回首页</button></div>
+        <div class="reading-header">
+          <div>
+            <span class="section-kicker">输入积累</span>
+            <h2>选一篇，跟着读起来</h2>
+            <p>跟着文字读一遍，再用自己的话说出两件事。</p>
+          </div>
+          <div class="reading-header-actions"><button id="reading-add-material" class="reading-add-material" type="button">＋ 添加我的素材</button></div>
+        </div>
+        <div id="reading-custom-form" class="reading-custom-form" hidden>
+          <div class="reading-custom-heading"><div><span class="section-kicker">我的输入</span><h3>把一段文字放进来练习</h3></div><button id="reading-custom-close" class="reading-change" type="button">收起</button></div>
+          <textarea id="reading-custom-text" rows="5" placeholder="粘贴一段你想练习的文字，保存后会直接显示在文章页面。"></textarea>
+          <div class="reading-custom-actions"><input id="reading-custom-title" type="text" maxlength="30" placeholder="给这段文字起个标题（可选）"><button id="reading-custom-save" class="reading-primary" type="button">显示到朗读列表</button></div>
+          <p id="reading-custom-status" class="reading-custom-status">建议 50—150 字，方便一次练习完成。</p>
+        </div>
+        <div id="reading-library" class="reading-library" aria-label="朗读文章列表"></div>
+        <div id="reading-player" class="reading-player" hidden>
+          <div class="reading-player-head">
+            <div><span id="reading-category" class="reading-category">短文</span><h3 id="reading-player-title"></h3></div>
+            <button id="reading-change" class="reading-change" type="button">换一篇</button>
+          </div>
+          <div class="reading-meter" aria-label="朗读进度">
+            <div class="reading-meter-track"><i id="reading-progress-fill"></i></div>
+            <span id="reading-progress-meta">0 / 0 字</span>
+          </div>
+          <article id="reading-text" class="reading-text" aria-label="文章原文"></article>
+          <div class="reading-skip-row">
+            <span id="reading-skip-hint">读到不熟的地方，可以先跳过。</span>
+            <button id="reading-skip" type="button">跳过未读部分</button>
+          </div>
+          <div class="reading-actions">
+            <button id="reading-start" class="reading-primary" type="button">开始朗读</button>
+            <button id="reading-pause" class="reading-secondary" type="button" hidden>暂停</button>
+            <button id="reading-stop" class="reading-secondary" type="button" hidden>完成朗读</button>
+          </div>
+          <div class="reading-live-status" role="status" aria-live="polite">
+            <span id="reading-mic" class="reading-mic is-idle"><i></i><b>麦克风未开启</b></span>
+            <span id="reading-status" class="reading-status">点击“开始朗读”，跟着文字读。</span>
+          </div>
+          <section id="reading-confirm" class="reading-confirm" hidden aria-label="开始复述确认">
+            <div class="recite-lock"><span>✓</span> 朗读完成</div>
+            <h3>准备好开始复述了吗？</h3>
+            <p>接下来会隐藏原文，请用自己的话说出你记得的两件事。</p>
+            <div class="recite-actions">
+              <button id="confirm-recite" class="reading-primary" type="button">开始复述</button>
+              <button id="confirm-reread" class="reading-secondary" type="button">再读一遍</button>
+            </div>
+          </section>
+          <section id="reading-recite" class="reading-recite" hidden aria-label="复述练习">
+            <div class="recite-lock"><span>🔒</span> 原文已隐藏</div>
+            <h3>现在，用自己的话说一遍</h3>
+            <p>不用背原句，说出你记得的两件事，或者讲讲你最有感觉的地方。</p>
+            <div id="recite-transcript" class="recite-transcript">点击“开始复述”，说说你记得的内容。</div>
+            <div id="recite-guidance" class="recite-guidance" aria-live="polite"><b>现在提示</b><span>先说一说，故事里谁遇到了什么事？</span></div>
+            <div id="recite-feedback" class="reading-feedback"><b>AI 小教练</b><span>可以先说发生了什么，再说你的感受。</span></div>
+            <div class="recite-actions">
+              <button id="recite-start" class="reading-primary" type="button">开始复述</button>
+              <button id="recite-stop" class="reading-secondary" type="button" hidden>完成复述</button>
+            </div>
+          </section>
+          <section id="reading-results" class="reading-results" hidden aria-label="朗读与复述对照结果">
+            <div class="results-heading"><span class="recite-lock"><span>★</span> 复述完成</span><h3>看看你刚刚说得多好</h3></div>
+            <div id="recite-version-tabs" class="recite-version-tabs" role="tablist" aria-label="复述版本"></div>
+            <div class="results-grid">
+              <article><span class="results-label">原文</span><p id="results-original"></p></article>
+              <article><span class="results-label">你的复述</span><p id="results-recite"></p></article>
+            </div>
+            <div id="results-feedback" class="reading-feedback results-feedback"><b>AI 小教练</b><span>你完成了一次复述。</span></div>
+            <div id="results-recite-guide" class="results-recite-guide" hidden>
+              <div><b>复述抓手</b><span>用来回看你有没有说到关键内容</span></div>
+              <p id="results-recite-grips"></p>
+              <small id="results-recite-emotions"></small>
+            </div>
+            <div class="reading-save-row">
+              <button id="reading-retry-recite" class="reading-secondary" type="button">重新复述</button>
+              <button id="reading-save" class="reading-save" type="button">保存这次练习</button>
+              <span id="reading-save-state" class="reading-save-state" aria-live="polite"></span>
+            </div>
+            <div id="reading-celebration" class="reading-celebration" hidden aria-live="polite">
+              <div class="celebration-sparkles" aria-hidden="true"><i>✦</i><i>✧</i><i>✺</i><i>✦</i></div>
+              <div class="celebration-thumb" aria-hidden="true">👍</div>
+              <b>保存成功！这次练习完成得真棒</b>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <dialog id="kids-info-dialog" class="kids-info-dialog" aria-labelledby="kids-info-title">
+        <div class="kids-info-heading">
+          <div><span id="kids-info-kicker" class="section-kicker">我的练习</span><h2 id="kids-info-title">历史记录</h2></div>
+          <button id="kids-info-close" class="access-close" aria-label="关闭" type="button">×</button>
+        </div>
+        <div id="kids-info-body" class="kids-info-body"></div>
+      </dialog>
+
+      <section id="free-expression-hub" class="free-expression-hub" hidden aria-label="自由表达练习">
+        <div class="free-page-back"><button id="free-expression-back" class="reading-back" type="button">← 返回首页</button></div>
+        <div class="free-expression-header">
+          <div><span class="section-kicker">原创输出</span><h2>选一个场景，开口说出来</h2><p>不提供范文，只给你一个生活入口和几个思考提示。</p></div>
+        </div>
+        <div class="free-scene-grid" aria-label="自由表达场景">
+          <button class="free-scene-card scene-home" data-free-scene="家庭" type="button"><span>🏠</span><b>家庭</b><small>和家人发生的小事</small></button>
+          <button class="free-scene-card scene-school" data-free-scene="校园" type="button"><span>🎒</span><b>校园</b><small>课堂、同学和老师</small></button>
+          <button class="free-scene-card scene-outdoor" data-free-scene="户外" type="button"><span>🌳</span><b>户外</b><small>公园、运动和发现</small></button>
+          <button class="free-scene-card scene-social" data-free-scene="社交" type="button"><span>🧡</span><b>社交</b><small>朋友之间的相处</small></button>
+          <button class="free-scene-card scene-daily" data-free-scene="日常小事" type="button"><span>✨</span><b>日常小事</b><small>一件普通但特别的事</small></button>
+          <button class="free-scene-card scene-travel" data-free-scene="旅行" type="button"><span>🗺️</span><b>旅行</b><small>路上看到的新鲜事</small></button>
+        </div>
+        <div id="free-expression-step" class="free-expression-step" hidden>
+          <div class="free-prompt-card"><span>💡</span><div><b>说话小路线</b><p id="free-prompt-text">先讲清事情，再补一个具体瞬间；想表达观点时，可以说“我认为……因为……”。</p></div></div>
+          <div class="free-step-heading"><div><span class="section-kicker">开口前想一想</span><h3>不用选词，按自己的感觉说</h3></div><span id="free-emotion-count" class="emotion-count">已选场景</span></div>
+          <p class="free-step-lead">你只要说真实发生过的一件事，右侧会在你说的过程中提醒：事情、原因、结果、具体细节和感受。</p>
+          <div class="free-guidance-grid" aria-label="自由表达引导">
+            <div><b>① 事情</b><span>发生了什么？</span></div>
+            <div><b>② 原因</b><span>为什么会这样？</span></div>
+            <div><b>③ 结果</b><span>后来怎么样？</span></div>
+            <div><b>④ 感受</b><span>我因为……感到……</span></div>
+          </div>
+          <button id="free-expression-start" class="free-expression-start" type="button" disabled>开始表达 <span>→</span></button>
+        </div>
+      </section>
+
+      <!-- 字幕区顶部工具栏 -->
+      <div class="access-status-bar"><span class="status-dot"></span><span id="access-status">开始前，选择 AI 使用方式</span><button id="btn-access-manage" type="button">管理</button></div>
+      <div class="subtitle-topbar">
+        <button id="btn-paste" class="btn-sm btn-paste-top">
+          <span>📋</span> 粘贴逐字稿
+        </button>
+        <div id="shared-expression-tools" class="shared-expression-tools hidden" aria-live="polite">
+          <span id="shared-expression-label" class="shared-expression-label">主表达器</span>
+          <button id="shared-expression-finish" class="shared-expression-finish" type="button">完成表达</button>
+        </div>
+        <div class="subtitle-topbar-right">
+          <button id="btn-copy-text" class="btn-sm hidden" title="复制原文">📋 复制</button>
+          <button id="btn-save-text" class="btn-sm hidden" title="保存原文">💾 保存</button>
+          <button id="btn-clear" class="btn-sm hidden" title="清空">🗑️ 清空</button>
+        </div>
+      </div>
+
+      <!-- 字幕滚动区 -->
+      <div id="subtitle-scroll" class="subtitle-scroll" style="position:relative;">
+        <div id="subtitle-container" class="subtitle-container">
+          <div class="subtitle-line hint">把想法说出来，<br>让表达更清楚。</div>
+        </div>
+        <div id="watermark-inner" class="watermark-inner">表达宇宙·达达口才训练</div>
+      </div>
+
+      <!-- 底部按钮 -->
+      <div class="action-bar">
+        <button id="btn-start" class="btn-main btn-start">
+          <span class="btn-icon-inner">🎤</span>
+          <span class="btn-label">开始录制</span>
+        </button>
+        <button id="btn-pause" class="btn-main btn-pause hidden">
+          <span class="btn-icon-inner">⏸️</span>
+          <span class="btn-label">暂停</span>
+        </button>
+        <button id="btn-resume" class="btn-main btn-resume hidden">
+          <span class="btn-icon-inner">▶️</span>
+          <span class="btn-label">继续</span>
+        </button>
+        <button id="btn-stop" class="btn-main btn-stop hidden">
+          <span class="btn-icon-inner">⏹️</span>
+          <span class="btn-label">结束</span>
+        </button>
+        <button id="btn-report" class="btn-main btn-report hidden">
+          <span class="btn-icon-inner">📋</span>
+          <span class="btn-label">生成报告</span>
+        </button>
+        <button id="btn-return-home" class="btn-main btn-return-home hidden" type="button">
+          <span class="btn-icon-inner">←</span>
+          <span class="btn-label">返回首页</span>
+        </button>
+      </div>
+    </main>
+
+    <!-- 右栏：实时反馈 -->
+    <aside class="panel-right" id="panel-right">
+      <div class="panel-title">💡 实时反馈</div>
+      <div id="feedback-content" class="feedback-content">
+        <div class="feedback-empty">选好主题后开口说，我会用孩子听得懂的话提醒你。</div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 移动端底部Tab栏 -->
+  <div class="mobile-tabs" id="mobile-tabs">
+    <button class="mobile-tab" data-panel="left">📊</button>
+    <button class="mobile-tab active" data-panel="main">🎤</button>
+    <button class="mobile-tab" data-panel="right">💡</button>
+  </div>
+
+  <!-- 耳机DJ少女 icon -->
+  <div class="girl-icon">
+    <svg width="44" height="44" viewBox="0 0 70 70" fill="none">
+      <path d="M16 32 Q16 14 35 12 Q54 14 54 32" stroke="#E5007E" stroke-width="2.5" fill="none"/>
+      <rect x="12" y="30" width="7" height="12" rx="3" fill="#E5007E" opacity="0.6"/>
+      <rect x="51" y="30" width="7" height="12" rx="3" fill="#E5007E" opacity="0.6"/>
+      <circle cx="35" cy="38" r="14" stroke="#E5007E" stroke-width="2" fill="none"/>
+      <path d="M28 36 Q32 33 36 36" stroke="#E5007E" stroke-width="1.5" fill="none"/>
+      <path d="M38 36 Q41 34 44 37" stroke="#E5007E" stroke-width="1.5" fill="none"/>
+      <circle cx="32" cy="35.5" r="1.2" fill="#E5007E"/>
+      <path d="M31 43 Q35 46 39 43" stroke="#E5007E" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+  <!-- 联系信息 -->
+  <div class="social-links" id="social-links">
+    <button class="social-toggle" id="social-toggle" type="button" title="Information" aria-label="联系信息">ⓘ</button>
+    <div class="social-panel hidden" id="social-panel">
+      <div class="contact-info" aria-label="联系信息">
+        <strong>有问题请联系</strong>
+        <span>微信号：xpga1123</span>
+        <a href="mailto:fxy2311@163.com">邮箱：fxy2311@163.com</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 水印 + 打赏 -->
+  <div class="watermark" id="watermark">表达宇宙·达达口才训练 by sisi</div>
+
+  <!-- V7-2 账号登录：测试版支持手机号自助注册，手机号用于识别用户和同步练习记录 -->
+  <dialog id="login-dialog" class="login-dialog" aria-labelledby="login-title">
+    <div class="login-card">
+      <div class="login-badge">EXPRESS COURT · V7-2 测试版</div>
+      <h1 id="login-title">登录表达宇宙·达达口才训练</h1>
+      <p class="login-lead">注册或登录后，练习记录、成长档案和 AI 分析会跟着账号保存。</p>
+      <form id="login-form">
+        <label for="login-phone">手机号</label>
+        <input id="login-phone" name="phone" type="tel" inputmode="tel" autocomplete="username" placeholder="输入你的手机号" required>
+        <div id="login-username-row" class="login-confirm-row hidden">
+          <label for="login-username">用户名</label>
+          <input id="login-username" name="username" type="text" autocomplete="nickname" maxlength="20" placeholder="给自己起个名字（可选）">
+        </div>
+        <label for="login-password">密码</label>
+        <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="输入登录密码" minlength="8" required>
+        <div id="login-confirm-row" class="login-confirm-row hidden">
+          <label for="login-confirm">确认密码</label>
+          <input id="login-confirm" name="passwordConfirm" type="password" autocomplete="new-password" placeholder="再输入一次密码" minlength="8">
+        </div>
+        <button id="login-submit" class="login-submit" type="submit">登录</button>
+        <button id="login-register" class="login-register" type="button">注册新账号</button>
+      </form>
+      <p id="login-message" class="login-message" role="status" aria-live="polite"></p>
+      <p id="login-note" class="login-note">登录后即可继续练习。</p>
+    </div>
+  </dialog>
+
+  <!-- V7: choose access before requesting microphone permission -->
+  <dialog id="access-dialog" aria-labelledby="access-title">
+    <div class="access-heading">
+      <h1 id="access-title">开始练习</h1>
+      <button id="access-close" class="access-close" aria-label="关闭" type="button">×</button>
+    </div>
+    <section id="account-settings-section" class="account-settings-section hidden" aria-labelledby="account-settings-title">
+      <div class="account-settings-topline"><span class="account-settings-kicker">账号状态</span><span id="account-status-badge" class="account-status-badge">未登录</span></div>
+      <h2 id="account-settings-title">登录你的练习账号</h2>
+      <p id="account-status-copy">登录后，练习记录、成长档案和 AI 分析会跟着账号保存。</p>
+      <div class="account-settings-actions"><button id="btn-account-login" type="button" class="access-primary">登录账号</button><button id="btn-account-logout" type="button" class="access-secondary hidden">退出登录</button></div>
+      <div id="account-stats" class="account-stats hidden" aria-live="polite">
+        <div class="account-stat"><strong id="account-stat-sessions">0</strong><span>完成练习</span></div>
+        <div class="account-stat"><strong id="account-stat-minutes">0</strong><span>练习分钟</span></div>
+        <div class="account-stat"><strong id="account-stat-reports">0</strong><span>AI 分析</span></div>
+      </div>
+      <p id="account-stats-message" class="account-stats-message"></p>
+    </section>
+    <div class="access-scroll">
+      <section id="managed-section" class="managed-section" aria-labelledby="managed-title">
+        <div class="option-heading"><h2 id="managed-title">购买练习套餐</h2><span class="option-tag">无需配置</span></div>
+        <div class="plan-summary"><div class="plan-price">¥29.9 <span>／套餐</span></div><p class="plan-limits"><strong>10 次</strong><span>或</span><strong>累计 60 分钟</strong></p><p class="plan-rule">任一用完，套餐即结束</p></div>
+        <p class="plan-features">实时 AI 提醒 · 练习分析报告</p>
+        <div class="plan-promises"><span>暂停不扣时</span><span>用完自动停止</span></div>
+        <div id="balance-area" class="hidden"><span>本套餐剩余</span><strong id="balance-value">0 次 · 00:00</strong><p id="pending-packs" class="service-note hidden"></p><button id="managed-start" type="button" class="access-primary">开始录制</button></div>
+        <button id="recover-session" type="button" class="text-action hidden">结束上次练习，重新开始</button>
+        <div class="purchase-actions"><button id="show-purchase" type="button" class="access-primary" aria-expanded="false" aria-controls="purchase-panel">支付宝扫码 ¥29.9</button><button id="show-redeem" type="button" class="text-action" aria-expanded="false" aria-controls="redeem-form">已有激活码</button></div>
+        <details class="key-help plan-details"><summary>购买与使用说明</summary><div class="detail-copy"><p><strong>付款后由 sisi 核实并发码</strong>，兑换后获得一个练习套餐。</p><p>成功开始新录制扣 1 次；暂停后继续不另扣。第 10 次可正常完成，累计 60 分钟用完则自动停止。新购套餐独立计算，按顺序使用。</p><p>每次练习最多生成 2 份报告，套餐用完仍可生成最后一次的报告。实时 AI 提醒最多 720 次。</p></div></details>
+        <div id="purchase-panel" class="purchase-panel hidden">
+          <div class="purchase-detail"><h3>支付宝扫码 · ¥29.9</h3><p>付款截图发给 sisi，核实后领取激活码。</p><p id="purchase-contact"></p><p class="qr-unavailable" id="purchase-unavailable">收款码待配置，暂未开放购买。</p></div>
+          <img id="payment-qr" class="hidden" alt="sisi 的支付宝收款二维码" width="220" height="220">
+        </div>
+        <form id="redeem-form" class="redeem-form hidden"><label for="activation-code">付款后收到的激活码</label><div class="redeem-row"><input id="activation-code" autocomplete="off" spellcheck="false" placeholder="粘贴激活码" required><button id="redeem-submit" type="submit" class="access-secondary">激活套餐</button></div><p class="privacy-note">使用凭证保存在当前浏览器。更换设备请联系 sisi。</p></form>
+        <p id="managed-unavailable" class="service-note hidden">即将开放购买</p>
+      </section>
+      <details id="key-option" class="key-option hidden" aria-hidden="true">
+        <summary><span>连接自己的 API Key</span><span class="key-option-hint">DeepSeek <span aria-hidden="true">＋</span></span></summary>
+        <section class="key-section" aria-label="填写自己的 DeepSeek API Key">
+          <form id="key-form">
+            <label for="access-key">DeepSeek API Key</label>
+            <div class="key-input-wrap"><input id="access-key" type="password" placeholder="粘贴 sk-…" autocomplete="off" autocapitalize="none" spellcheck="false" required><button id="toggle-key" type="button" aria-label="显示 API Key" aria-pressed="false">显示</button></div>
+            <div class="key-meta"><label class="remember-label"><input id="remember-key" type="checkbox">记住 Key</label><a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">获取 Key ↗</a></div>
+            <button id="key-submit" type="submit" class="access-secondary key-submit">验证并开始</button>
+            <details class="key-help"><summary>费用与密钥说明</summary><div class="detail-copy"><p>费用由 DeepSeek 按量收取，账户需有余额。Key 是访问密钥，请勿分享给别人。</p><p>Key 经本站服务器转发给 DeepSeek，本站不写入文件或日志。默认仅在当前标签页保留，勾选「记住 Key」后保存在本机浏览器。</p></div></details>
+          </form>
+        </section>
+      </details>
+    </div>
+    <p id="access-message" class="access-message" role="status" aria-live="polite"></p>
+  </dialog>
+
+  <!-- Prompt编辑器弹窗 -->
+  <div id="prompt-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🎯 训练规则</h2>
+        <button id="btn-close-prompt" class="btn-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-group">
+          <label class="settings-label">训练目标</label>
+          <textarea id="prompt-goals" class="settings-textarea" placeholder="例如：减少填充词，提高表达直接性，练习讲故事..."></textarea>
+        </div>
+        <div class="settings-group">
+          <label class="settings-label">自定义规则</label>
+          <textarea id="prompt-rules" class="settings-textarea" placeholder="例如：不要用'我觉得'开头，每段话要有结论..."></textarea>
+        </div>
+        <div class="settings-group">
+          <label class="settings-label">表达风格参考</label>
+          <textarea id="prompt-style" class="settings-textarea" placeholder="例如：像罗翔讲课那样，逻辑清晰+有故事+有金句"></textarea>
+        </div>
+        <div class="settings-group">
+          <label class="settings-label">额外口癖词</label>
+          <textarea id="prompt-words" class="settings-textarea" placeholder="例如：对对对、没错、确实、你懂吗"></textarea>
+        </div>
+        <div class="settings-actions">
+          <button id="btn-save-prompt" class="btn-main btn-start" style="padding:10px 24px;">保存规则</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 粘贴逐字稿弹窗 -->
+  <div id="paste-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📋 粘贴逐字稿</h2>
+        <button id="btn-close-paste" class="btn-close">×</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:12px;">
+        <p style="color:#888;font-size:13px;">把逐字稿粘贴进来，我帮你分析</p>
+        <textarea id="paste-textarea" placeholder="在这里粘贴文字..." style="flex:1;min-height:300px;background:#0a0a0a;border:1px solid #333;border-radius:8px;padding:16px;color:#fff;font-size:14px;line-height:1.8;resize:none;font-family:inherit;"></textarea>
+        <button id="btn-analyze-paste" class="btn-main btn-start" style="padding:12px 20px;align-self:flex-end;">🔍 开始分析</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 报告弹窗 -->
+  <div id="report-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📋 表达分析报告</h2>
+        <div class="modal-header-actions">
+          <button id="btn-copy-report" class="btn-sm">📋 复制全文</button>
+          <button id="btn-close-report" class="btn-close">×</button>
+        </div>
+      </div>
+      <div id="report-body" class="modal-body">
+      </div>
+    </div>
+  </div>
+
+  <!-- 打赏弹窗 -->
+  <div id="tip-modal" class="modal hidden">
+    <div class="modal-content modal-sm">
+      <div class="modal-header">
+        <h2>💝 联系 sisi</h2>
+        <button id="btn-close-tip" class="btn-close">×</button>
+      </div>
+      <div class="modal-body" style="text-align:center;padding:32px;">
+        <p style="color:#aaa;font-size:14px;margin-bottom:16px;">感谢使用表达宇宙·达达口才训练 ✨</p>
+        <p style="color:#ccc;font-size:14px;">微信联系 sisi，获取更多训练资源</p>
+        <p style="color:#666;font-size:12px;margin-top:16px;">(后续会加微信收款码)</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 去水印弹窗 -->
+  <!-- 打赏弹窗 -->
+  <div id="coffee-modal" class="modal hidden">
+    <div class="modal-content modal-sm">
+      <div class="modal-header">
+        <h2>☕ 请我喝杯咖啡</h2>
+        <button id="btn-close-coffee" class="btn-close">×</button>
+      </div>
+      <div class="modal-body" style="text-align:center;padding:32px;">
+        <p style="color:#ccc;font-size:15px;margin-bottom:24px;line-height:1.8;">支持你喜欢的工具继续迭代。<br>每一笔都会让这个系统变得更好。</p>
+        <div id="coffee-qr" style="margin-bottom:16px;"><img src="coffee-qr.jpg" alt="微信收款码" style="width:180px;border-radius:8px;"></div>
+        <p style="color:#666;font-size:12px;">微信扫码打赏</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="data/child-lexicon.bundle.js"></script>
+  <script src="demo-mode.js"></script>
+  <script src="access.js"></script>
+  <script src="kids-shell.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

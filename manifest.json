@@ -1,0 +1,23 @@
+{
+  "name": "表达宇宙·达达口才训练 V7-2",
+  "short_name": "表达宇宙·达达口才训练",
+  "description": "给 7—12 岁孩子的表达探险训练工具",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#FFF9ED",
+  "theme_color": "#FF4F9A",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "id": "./v7-2",
+  "scope": "./"
+}

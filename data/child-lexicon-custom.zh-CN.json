@@ -1,0 +1,7 @@
+{
+  "schemaVersion": "1.0.0",
+  "name": "用户自定义离线词库",
+  "language": "zh-CN",
+  "entries": [],
+  "instructions": "用户添加的词条只保存在当前浏览器，可随时删除。字段结构与主词库相同。"
+}

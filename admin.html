@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>表达宇宙·达达口才训练 · 管理员中心</title>
+  <meta name="theme-color" content="#1260b5">
+  <link rel="stylesheet" href="/admin.css?v=20261015-v7-2">
+</head>
+<body>
+  <main class="admin-shell">
+    <header class="admin-header">
+      <div><span class="admin-kicker">EXPRESS COURT · ADMIN</span><h1>管理员数据中心</h1><p>查看账号、练习进度和 AI 分析情况。</p></div>
+      <div class="admin-header-actions"><a href="/" class="admin-link">← 返回用户端</a><button id="admin-logout" class="admin-link hidden" type="button">退出登录</button></div>
+    </header>
+
+    <section id="admin-login" class="admin-card admin-login-card" aria-labelledby="admin-login-title">
+      <span class="admin-kicker">ADMIN ACCESS</span><h2 id="admin-login-title">登录管理员账号</h2>
+      <p>只有管理员账号可以查看这部分数据。用户端账号不会显示后台内容。</p>
+      <form id="admin-login-form" class="admin-form">
+        <label for="admin-login-phone">手机号</label><input id="admin-login-phone" type="tel" inputmode="tel" autocomplete="username" required placeholder="输入管理员手机号">
+        <label for="admin-login-password">密码</label><input id="admin-login-password" type="password" autocomplete="current-password" required placeholder="输入管理员密码">
+        <button class="admin-primary" type="submit">登录后台</button>
+      </form>
+      <p id="admin-login-message" class="admin-message" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="admin-dashboard" class="hidden" aria-label="管理员数据">
+      <div class="admin-toolbar"><div><span class="admin-kicker">OVERVIEW</span><h2>练习总览</h2></div><button id="admin-refresh" class="admin-secondary" type="button">刷新数据</button></div>
+      <p id="admin-message" class="admin-message" role="status" aria-live="polite"></p>
+      <div class="admin-summary">
+        <div><strong id="admin-total-users">—</strong><span>全部账号</span></div><div><strong id="admin-active-users">—</strong><span>正常账号</span></div><div><strong id="admin-completed-sessions">—</strong><span>完成练习</span></div><div><strong id="admin-total-minutes">—</strong><span>练习分钟</span></div><div><strong id="admin-report-count">—</strong><span>AI 分析</span></div>
+      </div>
+      <div class="admin-grid">
+        <section class="admin-card"><div class="admin-card-heading"><div><span class="admin-kicker">ACCOUNTS</span><h2>账号列表</h2></div></div><div id="admin-account-list" class="admin-account-list"></div></section>
+        <section class="admin-card"><span class="admin-kicker">NEW ACCOUNT</span><h2>创建账号</h2><p>给用户分配手机号、用户名和初始密码。</p><form id="admin-account-form" class="admin-form"><label for="admin-account-phone">手机号</label><input id="admin-account-phone" type="tel" inputmode="tel" required placeholder="例如 13800138000"><label for="admin-account-username">用户名</label><input id="admin-account-username" type="text" maxlength="20" placeholder="可选，2—20 个字"><label for="admin-account-password">初始密码</label><input id="admin-account-password" type="password" minlength="8" required placeholder="至少 8 位"><label for="admin-account-role">账号类型</label><select id="admin-account-role"><option value="user">普通用户</option><option value="admin">管理员</option></select><button class="admin-primary" type="submit">创建账号</button></form><p id="admin-account-message" class="admin-message" role="status" aria-live="polite"></p></section>
+      </div>
+    </section>
+  </main>
+  <script src="/admin.js?v=20261015-v7-2" defer></script>
+</body>
+</html>
