@@ -72,8 +72,22 @@
     细:'xi',结:'jie',果:'guo',原:'yuan',文:'wen',复:'fu',述:'shu',朗:'lang',读:'du',完:'wan',整:'zheng'
   };
 
+  // The generated offline map covers the full CJK block, including parent-added materials.
+  Object.assign(PINYIN_MAP, window.EXPR_PINYIN_MAP || {});
+
   function getPinyin(character) {
     return PINYIN_MAP[character] || '';
+  }
+
+  function voiceNeedsHttps() {
+    const hostname = String(window.location?.hostname || '');
+    return !window.isSecureContext && hostname !== 'localhost' && hostname !== '127.0.0.1' && hostname !== '::1';
+  }
+
+  function explainVoiceAccess(setMessage) {
+    if (!voiceNeedsHttps()) return false;
+    setMessage?.('语音识别需要安全连接，请用 HTTPS 打开页面；本机预览可直接使用。', 'error', '请使用 HTTPS 开启麦克风');
+    return true;
   }
 
   function pinyinText(text) {
@@ -550,6 +564,7 @@
       this.cursor = Math.max(this.cursor + 1, target); this.confirmedCursor = this.cursor; this.setStatus(this.cursor >= this.wordTokens.length ? '已跳到文章末尾，可以完成朗读。' : '已跳过这一段，继续读下一段。', this.running ? 'listening' : 'idle', this.running ? '麦克风已开启，正在听你朗读' : '麦克风未开启'); this.renderProgress();
     }
     startRecognition() {
+      if (voiceNeedsHttps()) { this.setStatus('语音识别需要安全连接，请用 HTTPS 打开页面；本机预览可直接使用。', 'error', '请使用 HTTPS 开启麦克风'); return; }
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition || !this.running || this.paused) { if (!SpeechRecognition) this.setStatus('当前浏览器不支持语音识别，可直接点击文字标记进度。', 'unsupported', '浏览器不支持语音识别'); return; }
       this.stopRecognition(); this.recognition = new SpeechRecognition(); this.recognition.lang = 'zh-CN'; this.recognition.continuous = true; this.recognition.interimResults = true;
@@ -679,6 +694,7 @@
       this.startRecite();
     }
     startRecite() {
+      if (voiceNeedsHttps()) { this.setStatus('语音识别需要安全连接，请用 HTTPS 打开页面；本机预览可直接使用。', 'error', '请使用 HTTPS 开启麦克风'); return; }
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       this.reciting = true; this.reciteStart.hidden = true; this.reciteStop.hidden = false; this.reciteText = ''; this.reciteFinalText = '';
       window.kidsShellSharedExpressionStart?.({
@@ -969,6 +985,7 @@
         }
         return;
       }
+      if (explainVoiceAccess((message, urgent) => this.setStoryAttention(message, urgent))) return;
       const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!Recognition) {
         this.setStoryAttention('当前浏览器暂不支持语音输入，也可以直接输入文字。', false);
