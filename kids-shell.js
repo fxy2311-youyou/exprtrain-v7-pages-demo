@@ -79,6 +79,15 @@
     return PINYIN_MAP[character] || '';
   }
 
+  function punctuateHistoryText(value) {
+    return String(value || '')
+      .split(/\n+/)
+      .map(line => line.trim())
+      .filter(Boolean)
+      .map(line => /[。！？；：]$/.test(line) ? line : `${line}。`)
+      .join('\n');
+  }
+
   function voiceNeedsHttps() {
     const hostname = String(window.location?.hostname || '');
     return !window.isSecureContext && hostname !== 'localhost' && hostname !== '127.0.0.1' && hostname !== '::1';
@@ -133,8 +142,8 @@
       const handle = document.createElement('button');
       handle.type = 'button';
       handle.className = 'shared-expression-drag-handle';
-      handle.textContent = '↕ 拖动表达框 · ↘ 拉伸大小';
-      handle.title = '拖动表达框；右下角可拉伸大小';
+      handle.textContent = '';
+      handle.setAttribute('aria-label', '移动表达框');
       subtitleScroll.prepend(handle);
       let drag = null;
       handle.addEventListener('pointerdown', event => {
@@ -165,10 +174,26 @@
     const label = document.getElementById('shared-expression-label');
     if (tools && finishButton) {
       const canFinish = typeof context.onFinish === 'function';
-      tools.classList.toggle('hidden', !canFinish);
+      // 闯关故事已经把练习控制移到底部，只保留“暂停/结束”；
+      // 其他表达场景仍使用主表达器顶部的完成按钮。
+      tools.classList.toggle('hidden', !canFinish || context.kind === 'adventure');
       if (label) label.textContent = context.title || '主表达器';
       finishButton.textContent = context.finishLabel || '完成表达';
       finishButton.onclick = canFinish ? context.onFinish : null;
+    }
+    if (trainer && context.kind === 'adventure') {
+      trainer.btnStart?.classList.add('hidden');
+      trainer.btnResume?.classList.add('hidden');
+      trainer.btnReport?.classList.add('hidden');
+      trainer.btnReturnHome?.classList.add('hidden');
+      trainer.btnPause?.classList.remove('hidden');
+      trainer.btnStop?.classList.remove('hidden');
+      const pauseLabel = trainer.btnPause?.querySelector?.('.btn-label');
+      const pauseIcon = trainer.btnPause?.querySelector?.('.btn-icon-inner');
+      if (pauseLabel) pauseLabel.textContent = '暂停';
+      if (pauseIcon) pauseIcon.textContent = '⏸️';
+      trainer.btnPause.onclick = typeof context.onPause === 'function' ? context.onPause : null;
+      trainer.btnStop.onclick = typeof context.onFinish === 'function' ? context.onFinish : null;
     }
   }
 
@@ -227,6 +252,19 @@
     const finishButton = document.getElementById('shared-expression-finish');
     tools?.classList.add('hidden');
     if (finishButton) finishButton.onclick = null;
+    const trainer = window.trainer;
+    if (trainer) {
+      trainer.btnStart?.classList.remove('hidden');
+      trainer.btnPause?.classList.add('hidden');
+      trainer.btnResume?.classList.add('hidden');
+      trainer.btnStop?.classList.add('hidden');
+      trainer.btnPause && (trainer.btnPause.onclick = null);
+      trainer.btnStop && (trainer.btnStop.onclick = null);
+      const pauseLabel = trainer.btnPause?.querySelector?.('.btn-label');
+      const pauseIcon = trainer.btnPause?.querySelector?.('.btn-icon-inner');
+      if (pauseLabel) pauseLabel.textContent = '暂停';
+      if (pauseIcon) pauseIcon.textContent = '⏸️';
+    }
     const subtitleScroll = document.getElementById('subtitle-scroll');
     if (subtitleScroll) {
       subtitleScroll.style.removeProperty('transform');
@@ -276,6 +314,8 @@
       { id: 'daily-surprise', title: '今天的小惊喜', prompt: '今天有什么事情让你意外或开心？' }
     ] }
   ];
+  const ADVENTURE_ORDER = ADVENTURE_ISLANDS.map(island => island.id);
+  const ADVENTURE_UNLOCK_KEY = 'expr_v9_adventure_unlocks';
 
   class ReadingPractice {
     constructor() {
@@ -403,7 +443,7 @@
         return `<article class="reading-card reading-card-${article.color} ${complete ? 'is-read' : 'is-unread'}" data-reading-card="${article.id}">
           <button class="reading-card-open" type="button" data-reading-id="${article.id}">
             <span class="reading-card-index">${String(index + 1).padStart(2, '0')}</span>
-            <span class="reading-card-copy"><b>${escapeHtml(article.title)}</b><small>${escapeHtml(article.category)} · 约 ${tokenize(article.text).filter(token => !token.punctuation).length} 字</small><em>${escapeHtml(article.summary)}</em></span>
+            <span class="reading-card-copy"><b>${escapeHtml(article.title)}</b><small>${article.custom ? '家长素材' : '原版文章'} · 约 ${tokenize(article.text).filter(token => !token.punctuation).length} 字</small><em>${escapeHtml(article.summary)}</em></span>
             <span class="reading-card-arrow">→</span>
           </button>
           ${article.custom ? `<button class="reading-card-delete" type="button" data-delete-reading-id="${article.id}" aria-label="删除 ${escapeHtml(article.title)}">× 删除</button>` : ''}
@@ -769,8 +809,8 @@
         id: `reading-${Date.now()}`,
         articleId: this.selected.id,
         title: this.selected.title,
-        original: this.selected.text,
-        recite: selectedRecite,
+        original: punctuateHistoryText(this.selected.text),
+        recite: punctuateHistoryText(selectedRecite),
         matchedCount,
         analysis: this.latestAnalysis || '',
         createdAt: new Date().toISOString()
@@ -872,13 +912,17 @@
       this.emotionMic = document.getElementById('adventure-emotion-mic');
       this.storyMic = document.getElementById('adventure-story-mic');
       this.selectedIsland = null; this.selectedTopic = null; this.emotionWords = [];
-      this.recognition = null; this.voiceKind = ''; this.voiceBase = ''; this.voiceSessionText = ''; this.voiceWanted = false; this.voiceRestartTimer = null;
+      this.recognition = null; this.voiceKind = ''; this.voiceBase = ''; this.voiceSessionText = ''; this.voiceWanted = false; this.voiceRestartTimer = null; this.storyRecognitionClass = null; this.storyPaused = false;
       this.bind(); this.renderIslands();
     }
     bind() {
       this.hub.querySelector('#adventure-back-islands')?.addEventListener('click', () => this.showIslands());
       this.hub.querySelector('#adventure-change-theme')?.addEventListener('click', () => this.showThemes());
       this.hub.querySelector('#adventure-emotion-submit')?.addEventListener('click', () => this.submitEmotion());
+      this.emotionSlots?.addEventListener('click', event => {
+        const remove = event.target.closest?.('[data-remove-emotion]');
+        if (remove) this.removeEmotion(Number(remove.dataset.removeEmotion));
+      });
       this.hub.querySelector('#adventure-emotion-mic')?.addEventListener('click', () => this.toggleVoice('emotion'));
       this.hub.querySelector('#adventure-story-mic')?.addEventListener('click', () => this.toggleVoice('story'));
       this.hub.querySelector('#adventure-story-submit')?.addEventListener('click', () => this.finishStory());
@@ -896,8 +940,45 @@
     }
     renderIslands() {
       if (!this.islands) return;
-      this.islands.innerHTML = ADVENTURE_ISLANDS.map(island => `<button type="button" class="adventure-island adventure-island-${island.color}" data-adventure-island="${island.id}"><span class="adventure-island-icon">${island.icon}</span><b>${island.name}岛</b><small>${island.topics.length} 个主题</small><i>→</i></button>`).join('');
-      this.islands.querySelectorAll('[data-adventure-island]').forEach(button => button.addEventListener('click', () => this.selectIsland(button.dataset.adventureIsland)));
+      this.islands.innerHTML = ADVENTURE_ISLANDS.map(island => {
+        const unlocked = this.islandUnlocked(island.id);
+        const label = unlocked ? island.topics.length + ' 个主题' : '完成上一座岛解锁';
+        const icon = unlocked ? island.icon : '🔒';
+        const arrow = unlocked ? '→' : '锁定';
+        return '<button type="button" class="adventure-island adventure-island-' + island.color + (unlocked ? '' : ' is-locked') + '" data-adventure-island="' + island.id + '"' + (unlocked ? '' : ' disabled') + '><span class="adventure-island-icon">' + icon + '</span><b>' + island.name + '岛</b><small>' + label + '</small><i>' + arrow + '</i></button>';
+      }).join('');
+      this.islands.querySelectorAll('[data-adventure-island]:not(:disabled)').forEach(button => button.addEventListener('click', () => this.selectIsland(button.dataset.adventureIsland)));
+    }
+    readAdventureProgress() {
+      try {
+        const value = JSON.parse(localStorage.getItem('expr_v3_adventure_progress') || '[]');
+        return Array.isArray(value) ? value : [];
+      } catch (_) { return []; }
+    }
+    readAdventureUnlocks() {
+      const progress = this.readAdventureProgress();
+      const unlocked = new Set(['family']);
+      try {
+        const stored = JSON.parse(localStorage.getItem(ADVENTURE_UNLOCK_KEY) || '[]');
+        if (Array.isArray(stored)) stored.forEach(id => unlocked.add(id));
+      } catch (_) {}
+      for (let index = 0; index < ADVENTURE_ORDER.length - 1; index += 1) {
+        const island = ADVENTURE_ISLANDS[index];
+        if (progress.some(item => item?.island === island.name)) unlocked.add(ADVENTURE_ORDER[index + 1]);
+        else break;
+      }
+      return unlocked;
+    }
+    islandUnlocked(id) {
+      return this.readAdventureUnlocks().has(id);
+    }
+    unlockNextIsland(id) {
+      const index = ADVENTURE_ORDER.indexOf(id);
+      if (index < 0 || index >= ADVENTURE_ORDER.length - 1) return;
+      const unlocked = this.readAdventureUnlocks();
+      unlocked.add(ADVENTURE_ORDER[index + 1]);
+      try { localStorage.setItem(ADVENTURE_UNLOCK_KEY, JSON.stringify([...unlocked])); } catch (_) {}
+      this.renderIslands();
     }
     showIslands() {
       this.closeResultDialog();
@@ -910,7 +991,7 @@
     }
     selectIsland(id) {
       const island = ADVENTURE_ISLANDS.find(item => item.id === id);
-      if (!island) return;
+      if (!island || !this.islandUnlocked(id)) return;
       this.selectedIsland = island;
       this.themeTitle.textContent = `${island.name}岛`;
       this.themeList.innerHTML = island.topics.map((topic, index) => `<button type="button" class="adventure-theme-card" data-adventure-topic="${topic.id}"><span class="adventure-theme-number">${String(index + 1).padStart(2, '0')}</span><span><b>${topic.title}</b><small>${topic.prompt}</small></span><i>→</i></button>`).join('');
@@ -936,8 +1017,8 @@
       this.emotionInput.value = ''; this.storyInput.value = ''; this.emotionHints.hidden = true;
       this.renderEmotionSlots();
       this.stageBadge.textContent = '第 1 关 · 情绪热身';
-      this.stageTitle.textContent = '先说出三个情感类词语';
-      this.stagePrompt.textContent = `在“${topic.title}”这件事里，你是什么感觉？请先说出三个情感类词语。`;
+      this.stageTitle.textContent = '先说出 1—3 个情绪词';
+      this.stagePrompt.textContent = `在“${topic.title}”这件事里，你是什么感觉？说出 1—3 个就可以，说错了随时点 × 删除。`;
       this.emotionStage.hidden = false; this.storyStage.hidden = true; this.resultStage.hidden = true;
       this.islands.hidden = true; this.themes.hidden = true; this.stage.hidden = false;
       this.stage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -954,25 +1035,40 @@
       if (!value || this.emotionWords.includes(value) || this.emotionWords.length >= 3) return;
       this.emotionWords.push(value); this.emotionInput.value = ''; this.renderEmotionSlots();
     }
+    removeEmotion(index) {
+      if (!Number.isInteger(index) || index < 0 || index >= this.emotionWords.length) return;
+      this.emotionWords.splice(index, 1);
+      this.renderEmotionSlots();
+      this.stagePrompt.textContent = this.emotionWords.length
+        ? `现在有 ${this.emotionWords.length} 个情绪词；说错了可以点 × 删除，也可以再补充。`
+        : '可以说 1—3 个情绪词；说错了就点 × 删除。';
+      this.emotionInput?.focus();
+    }
     renderEmotionSlots() {
       if (!this.emotionSlots) return;
-      this.emotionSlots.innerHTML = [0, 1, 2].map(index => this.emotionWords[index] ? `<span class="is-filled"><b>${index + 1}</b>${escapeHtml(this.emotionWords[index])}</span>` : `<span><b>${index + 1}</b>词语 ${index + 1}</span>`).join('');
+      this.emotionSlots.innerHTML = [0, 1, 2].map(index => this.emotionWords[index]
+        ? `<span class="is-filled"><b>${index + 1}</b>${escapeHtml(this.emotionWords[index])}<button type="button" class="adventure-emotion-remove" data-remove-emotion="${index}" aria-label="删除情绪词 ${escapeHtml(this.emotionWords[index])}">×</button></span>`
+        : `<span><b>${index + 1}</b>词语 ${index + 1}</span>`).join('');
     }
     submitEmotion() {
       this.parseEmotionWords(this.emotionInput?.value).forEach(word => this.addEmotion(word));
-      if (this.emotionWords.length < 3) {
-        const missing = 3 - this.emotionWords.length;
+      if (!this.emotionWords.length) {
         this.emotionHints.hidden = false;
-        this.stagePrompt.textContent = `还差 ${missing} 个。想一想：当时是开心、自豪，还是有一点紧张或委屈？`;
+        this.stagePrompt.textContent = '至少说一个情绪词就可以继续；想一想：开心、自豪、紧张或委屈？';
         return;
       }
       this.emotionHints.hidden = true; this.emotionStage.hidden = true; this.storyStage.hidden = false;
+      if (this.voiceKind === 'emotion' || this.recognition) this.stopVoice();
       this.stageBadge.textContent = '第 2 关 · 小事表达';
       this.stageTitle.textContent = '现在，用刚刚的词说一件小事';
       this.stagePrompt.textContent = `拿“${this.emotionWords.join('、')}”来描述最近发生的一件事，一句话、两句话、三句话都可以。`;
       this.pickedWords.textContent = this.emotionWords.join(' · ');
-      this.storyFeedback.textContent = '非常好！三个情绪词都找到了。现在说最近的一件小事。';
+      this.storyFeedback.textContent = `非常好！你找到了 ${this.emotionWords.length} 个情绪词。现在说最近的一件小事。`;
       this.storyInput.focus();
+      // 故事弹窗出现后直接开始录制，孩子只需要使用底部的暂停和结束。
+      window.setTimeout(() => {
+        if (!this.storyStage.hidden && !this.recognition && !this.voiceWanted) this.toggleVoice('story');
+      }, 120);
     }
     toggleVoice(kind) {
       if (this.recognition || this.voiceWanted) {
@@ -993,13 +1089,14 @@
       }
       this.voiceWanted = true; this.voiceKind = kind; this.voiceBase = kind === 'story' ? this.storyInput.value.trim() : ''; this.voiceSessionText = '';
       if (kind === 'story') {
+        this.storyPaused = false; this.storyRecognitionClass = Recognition;
         window.kidsShellSharedExpressionStart?.({
           kind: 'adventure',
           title: `闯关故事 · ${this.selectedTopic?.title || '一件小事'}`,
           prompts: ['先说发生了什么', `用刚才的情绪词：${this.emotionWords.join('、')}`, '补一句后来结果怎样'],
           openingHint: '可以说一句、两句或三句，先从第一句开始。',
           fullPage: true,
-          finishLabel: '完成这一关',
+          onPause: () => this.toggleStoryPause(),
           onFinish: () => this.finishStory()
         });
         // 语音开始后只保留主表达器，避免闯关页的输入框和中央字幕重复显示。
@@ -1012,7 +1109,7 @@
       const recognition = new Recognition();
       this.recognition = recognition;
       recognition.lang = 'zh-CN'; recognition.continuous = kind === 'story'; recognition.interimResults = true;
-      recognition.onstart = () => { const button = kind === 'emotion' ? this.emotionMic : this.storyMic; if (button) button.textContent = '⏹ 停止听'; this.storyFeedback.textContent = kind === 'emotion' ? '我在听，你可以连续说三个感觉。' : '我在听，你可以自然停顿；说完请点击“完成这一关”。'; };
+      recognition.onstart = () => { const button = kind === 'emotion' ? this.emotionMic : this.storyMic; if (button) button.textContent = '⏹ 停止听'; this.storyFeedback.textContent = kind === 'emotion' ? '我在听，你可以连续说三个感觉。' : '我在听，你可以自然停顿；说完点击底部“结束”。'; };
       recognition.onresult = event => {
         let finalText = ''; let interimText = '';
         for (let index = event.resultIndex; index < event.results.length; index += 1) {
@@ -1034,7 +1131,7 @@
       };
       recognition.onerror = event => {
         if (event.error === 'no-speech' && kind === 'story' && this.voiceWanted) {
-          this.setStoryAttention('暂时没有听到声音，可以继续说；说完再点击“完成这一关”。', false);
+          this.setStoryAttention('暂时没有听到声音，可以继续说；说完点击底部“结束”。', false);
           return;
         }
         this.voiceWanted = false;
@@ -1057,6 +1154,29 @@
       if (this.storyMic) this.storyMic.textContent = '🎤 开始说故事';
       this.recognition = null; this.voiceKind = '';
     }
+    toggleStoryPause() {
+      if (this.voiceKind !== 'story' && !this.storyPaused) return;
+      if (this.storyPaused) {
+        this.storyPaused = false;
+        this.voiceWanted = true;
+        this.setStoryAttention('继续说吧，我在听。', false);
+        if (this.storyRecognitionClass) this.createRecognition(this.storyRecognitionClass, 'story');
+        const label = window.trainer?.btnPause?.querySelector?.('.btn-label');
+        const icon = window.trainer?.btnPause?.querySelector?.('.btn-icon-inner');
+        if (label) label.textContent = '暂停';
+        if (icon) icon.textContent = '⏸️';
+        return;
+      }
+      this.storyPaused = true;
+      this.voiceWanted = false;
+      clearTimeout(this.voiceRestartTimer);
+      if (this.recognition) { try { this.recognition.stop(); } catch (_) {} this.recognition = null; }
+      this.setStoryAttention('已暂停。准备好后点击“继续”。', false);
+      const label = window.trainer?.btnPause?.querySelector?.('.btn-label');
+      const icon = window.trainer?.btnPause?.querySelector?.('.btn-icon-inner');
+      if (label) label.textContent = '继续';
+      if (icon) icon.textContent = '▶️';
+    }
     setStoryAttention(message, attention = true) {
       if (!this.storyFeedback) return;
       this.storyFeedback.textContent = message;
@@ -1072,32 +1192,68 @@
       if (!this.resultDialog.open) this.resultDialog.showModal();
     }
     stopVoice() {
-      this.voiceWanted = false; clearTimeout(this.voiceRestartTimer);
+      this.voiceWanted = false; this.storyPaused = false; clearTimeout(this.voiceRestartTimer);
       if (this.recognition) { try { this.recognition.stop(); } catch (_) {} this.recognition = null; }
       this.resetVoiceButton();
     }
     finishStory() {
-      const text = this.storyInput?.value.trim() || '';
-      if (text.length < 8) { this.setStoryAttention('还没说完，再补一小句：发生了什么，或者你有什么感受？'); this.storyInput.focus(); return; }
+      // 主表达器是闯关语音流程的唯一字幕来源。某些浏览器会把最终字幕写入
+      // trainer.fullText，而闯关页自己的隐藏输入框仍然为空，因此这里要优先
+      // 使用主表达器文本，避免点击“完成这一关”后静默退出。
+      const sharedText = window.trainer?.fullText || window.sharedExpressionContext?.text || '';
+      const text = (this.storyInput?.value.trim() || String(sharedText).trim()).trim();
+      if (this.storyInput && text && this.storyInput.value.trim() !== text) this.storyInput.value = text;
+      if (text.length < 8) { this.setStoryAttention('还没说完，再补一小句：发生了什么，或者你有什么感受？'); this.storyInput?.focus(); return; }
       this.stopVoice();
       const matchedEmotion = this.emotionWords.some(word => text.includes(word));
       const starCount = text.length >= 32 && matchedEmotion ? 3 : (text.length >= 16 || matchedEmotion ? 2 : 1);
-      this.stageBadge.textContent = '第 3 步 · 通关结算'; this.emotionStage.hidden = true; this.storyStage.hidden = false; this.resultStage.hidden = true;
+      this.stageBadge.textContent = '第 3 步 · 通关结算'; this.emotionStage.hidden = true; this.storyStage.hidden = true; this.resultStage.hidden = false;
       this.stage.hidden = false;
       this.home?.classList.remove('is-launching');
       this.stars.textContent = '★'.repeat(starCount) + '☆'.repeat(3 - starCount);
       const feedback = `你完成了！你把“${this.selectedTopic.title}”这件事和${this.emotionWords.join('、')}的感受说出来了。${starCount === 3 ? '细节很完整，拿到三星！' : '再加一点细节，下一次就能拿更高星。'}`;
       this.resultFeedback.textContent = feedback;
-      this.saveProgress({ stars: starCount, story: text, emotions: [...this.emotionWords] });
+      const historyId = this.saveProgress({ stars: starCount, story: punctuateHistoryText(text), emotions: [...this.emotionWords] });
+      this.unlockNextIsland(this.selectedIsland?.id);
       window.kidsShellSharedExpressionFinish?.('故事完成！看看左边的表达小雷达，再选右边的一条提示练习。');
       window.kidsShellSharedExpressionEnd?.();
-      this.openResultDialog(starCount, text, feedback);
+      const trainer = window.trainer;
+      if (trainer?.generateAdventureReport) {
+        const reportContext = {
+          story: text, topic: this.selectedTopic.title, island: this.selectedIsland?.name || '',
+          emotions: [...this.emotionWords], stars: starCount, historyId,
+          onComplete: report => this.updateProgressAnalysis(historyId, report)
+        };
+        trainer.adventureReportContext = reportContext;
+        trainer.adventureReportValue = '';
+        trainer.btnStart?.classList.add('hidden');
+        trainer.btnReport?.classList.remove('hidden');
+        const reportLabel = trainer.btnReport?.querySelector?.('.btn-label');
+        if (reportLabel) reportLabel.textContent = '查看 AI 分析';
+        else if (trainer.btnReport) trainer.btnReport.textContent = '查看 AI 分析';
+        // 闯关完成后直接打开儿童版 AI 分析；关闭后仍留在本关结算页面。
+        this.closeResultDialog();
+        trainer.generateAdventureReport(reportContext);
+      } else {
+        this.openResultDialog(starCount, text, feedback);
+      }
     }
     saveProgress(result) {
       try {
         const history = JSON.parse(localStorage.getItem('expr_v3_adventure_progress') || '[]');
-        const entry = { id: `quest-${Date.now()}`, island: this.selectedIsland?.name || '', topic: this.selectedTopic?.title || '', emotions: [...this.emotionWords], ...result, createdAt: new Date().toISOString() };
+        const entry = { id: `quest-${Date.now()}`, island: this.selectedIsland?.name || '', topic: this.selectedTopic?.title || '', emotions: [...this.emotionWords], report: '', ...result, createdAt: new Date().toISOString() };
         localStorage.setItem('expr_v3_adventure_progress', JSON.stringify([entry, ...(Array.isArray(history) ? history : [])].slice(0, 50)));
+        return entry.id;
+      } catch (_) {}
+      return '';
+    }
+    updateProgressAnalysis(id, report) {
+      if (!id || !report) return;
+      try {
+        const history = JSON.parse(localStorage.getItem('expr_v3_adventure_progress') || '[]');
+        if (!Array.isArray(history)) return;
+        const entry = history.find(item => item?.id === id);
+        if (entry) { entry.report = report; localStorage.setItem('expr_v3_adventure_progress', JSON.stringify(history)); }
       } catch (_) {}
     }
   }
@@ -1108,17 +1264,41 @@
       this.body = document.getElementById('kids-info-body');
       this.title = document.getElementById('kids-info-title');
       this.kicker = document.getElementById('kids-info-kicker');
+      this.detailDialog = document.getElementById('history-detail-dialog');
+      this.detailTitle = document.getElementById('history-detail-title');
+      this.detailBody = document.getElementById('history-detail-body');
       this.chatMessages = [];
       this.chatBusy = false;
+      this.historyExpanded = true;
+      this.historyDetailMap = new Map();
       if (!this.dialog || !this.body) return;
       document.getElementById('kids-info-close')?.addEventListener('click', () => this.dialog.close());
+      document.getElementById('history-detail-close')?.addEventListener('click', () => this.detailDialog?.close());
       this.body.addEventListener('click', event => {
+        const detailButton = event.target.closest?.('[data-history-detail]');
+        if (detailButton) {
+          const detail = this.historyDetailMap.get(detailButton.dataset.historyDetail);
+          if (detail) this.openHistoryDetail(detail);
+          return;
+        }
+        const historyToggle = event.target.closest?.('[data-history-toggle]');
+        if (historyToggle) {
+          this.historyExpanded = !this.historyExpanded;
+          const history = this.readHistory();
+          const adventure = this.readAdventureProgress();
+          this.body.innerHTML = this.renderGrowth(history, adventure);
+          return;
+        }
         const button = event.target.closest?.('[data-info-nav]');
         if (button) this.open(button.dataset.infoNav);
         const suggestion = event.target.closest?.('[data-growth-question]');
         if (suggestion) {
           const input = this.body.querySelector('[data-growth-chat-input]');
           if (input) { input.value = suggestion.dataset.growthQuestion || ''; input.focus(); }
+        }
+        if (event.target.closest?.('[data-growth-clear]')) {
+          this.clearGrowthChat();
+          return;
         }
         if (event.target.closest?.('[data-growth-chat-settings]')) window.accessController?.open('settings');
       });
@@ -1132,20 +1312,36 @@
     readHistory() {
       try {
         const value = JSON.parse(localStorage.getItem('expr_v3_reading_history') || '[]');
-        return Array.isArray(value) ? value : [];
+        if (!Array.isArray(value)) return [];
+        const normalized = value.map(item => ({ ...item, original: punctuateHistoryText(item.original), recite: punctuateHistoryText(item.recite) }));
+        if (JSON.stringify(normalized) !== JSON.stringify(value)) localStorage.setItem('expr_v3_reading_history', JSON.stringify(normalized));
+        return normalized;
       } catch (_) { return []; }
     }
     readAdventureProgress() {
       try {
         const value = JSON.parse(localStorage.getItem('expr_v3_adventure_progress') || '[]');
-        return Array.isArray(value) ? value : [];
+        if (!Array.isArray(value)) return [];
+        const normalized = value.map(item => ({ ...item, story: punctuateHistoryText(item.story) }));
+        if (JSON.stringify(normalized) !== JSON.stringify(value)) localStorage.setItem('expr_v3_adventure_progress', JSON.stringify(normalized));
+        return normalized;
       } catch (_) { return []; }
     }
     readExpressionHistory() {
       try {
         const value = JSON.parse(localStorage.getItem('expr_v3_expression_history') || '[]');
-        return Array.isArray(value) ? value : [];
+        if (!Array.isArray(value)) return [];
+        const normalized = value.map(item => ({ ...item, text: punctuateHistoryText(item.text) }));
+        if (JSON.stringify(normalized) !== JSON.stringify(value)) localStorage.setItem('expr_v3_expression_history', JSON.stringify(normalized));
+        return normalized;
       } catch (_) { return []; }
+    }
+    clearGrowthChat() {
+      this.chatMessages = [];
+      this.chatBusy = false;
+      const history = this.readHistory();
+      const adventure = this.readAdventureProgress();
+      this.body.innerHTML = this.renderGrowth(history, adventure);
     }
     open(mode = 'history') {
       if (!this.dialog) return;
@@ -1155,10 +1351,38 @@
       const labels = { history: ['我的练习', '历史记录'], growth: ['坚持会发光', '成长档案'], parent: ['一起陪伴', '家长中心'] };
       this.kicker.textContent = labels[mode]?.[0] || labels.history[0];
       this.title.textContent = labels[mode]?.[1] || labels.history[1];
+      if (mode === 'growth') this.chatMessages = [];
       if (mode === 'growth') this.body.innerHTML = this.renderGrowth(history, adventure);
       else if (mode === 'parent') this.body.innerHTML = this.renderParent(history, adventure, expression);
       else this.body.innerHTML = this.renderHistory(history, adventure, expression);
       if (!this.dialog.open) this.dialog.showModal();
+    }
+    registerHistoryDetail(kind, item, key) {
+      const id = `${kind}-${key}`;
+      this.historyDetailMap.set(id, { kind, item });
+      return id;
+    }
+    openHistoryDetail(detail) {
+      if (!this.detailDialog || !this.detailBody) return;
+      const item = detail.item || {};
+      const date = item.createdAt ? new Date(item.createdAt).toLocaleString('zh-CN') : '刚刚';
+      const text = value => escapeHtml(value || '暂无记录').replace(/\n/g, '<br>');
+      let title = '历史记录详情';
+      let content = '';
+      if (detail.kind === 'reading') {
+        title = item.title || '朗读复述练习';
+        content = `<div class="history-detail-meta"><span>朗读复述</span><time>${text(date)}</time></div><dl class="history-detail-list"><dt>文章原文</dt><dd>${text(punctuateHistoryText(item.original))}</dd><dt>我的复述</dt><dd>${text(punctuateHistoryText(item.recite))}</dd><dt>原文关键词</dt><dd>匹配 ${Number(item.matchedCount) || 0} 个</dd>${item.analysis ? `<dt>AI 小教练反馈</dt><dd>${text(item.analysis)}</dd>` : ''}</dl>`;
+      } else if (detail.kind === 'adventure') {
+        title = `${item.island || '闯关'} · ${item.topic || '表达主题'}`;
+        const stars = '★'.repeat(Math.min(3, Number(item.stars) || 0)) + '☆'.repeat(Math.max(0, 3 - (Number(item.stars) || 0)));
+        content = `<div class="history-detail-meta"><span>闯关冒险</span><time>${text(date)}</time></div><dl class="history-detail-list"><dt>情绪词</dt><dd>${text((item.emotions || []).join('、'))}</dd><dt>我的故事</dt><dd>${text(punctuateHistoryText(item.story))}</dd><dt>通关星级</dt><dd class="history-detail-stars">${stars}</dd>${item.report ? `<dt>AI 小教练反馈</dt><dd>${text(item.report)}</dd>` : ''}</dl>`;
+      } else {
+        title = item.title || '自由表达练习';
+        content = `<div class="history-detail-meta"><span>自由表达</span><time>${text(date)}</time></div><dl class="history-detail-list"><dt>我说的内容</dt><dd>${text(punctuateHistoryText(item.text))}</dd><dt>表达数据</dt><dd>${Number(item.totalWords) || 0} 字 · 说清楚度 ${Number(item.density) || 0}%</dd>${item.report ? `<dt>AI 小教练反馈</dt><dd>${text(item.report)}</dd>` : ''}</dl>`;
+      }
+      this.detailTitle.textContent = title;
+      this.detailBody.innerHTML = content;
+      if (!this.detailDialog.open) this.detailDialog.showModal();
     }
     growthContext(history, adventure, expression) {
       const items = [
@@ -1187,10 +1411,10 @@
       const recordCount = history.length + adventure.length + expression.length;
       return `<section class="growth-chat" aria-label="成长档案 AI 对话">
         <div class="growth-chat-head"><div><span class="section-kicker">一起看见进步</span><h4>问问 AI 小教练</h4><p>我会根据这 ${recordCount} 条练习记录，用孩子听得懂的话回答。</p></div><span class="growth-chat-orb" aria-hidden="true">💬</span></div>
-        <div class="growth-chat-suggestions" aria-label="快捷问题"><button type="button" data-growth-question="请总结我最近的表达进步。">最近进步在哪里？</button><button type="button" data-growth-question="下一次练习，我最该先改哪一点？">下一次练什么？</button><button type="button" data-growth-question="哪一次练习说得最完整？为什么？">哪次说得最好？</button></div>
+        <div class="growth-chat-suggestions" aria-label="快捷问题"><button type="button" data-growth-question="请总结我最近的表达进步。">最近进步在哪里？</button><button type="button" data-growth-question="下一次练习，我最该先改哪一点？">下一次练什么？</button><button type="button" data-growth-question="哪一次练习说得最完整？为什么？">哪次说得最好？</button><button type="button" class="growth-chat-clear" data-growth-clear>清空聊天</button></div>
         <div class="growth-chat-messages" aria-live="polite">${empty}${messages}</div>
         <form class="growth-chat-form" data-growth-chat-form><textarea data-growth-chat-input rows="2" maxlength="500" placeholder="例如：帮我总结这周的表达变化"></textarea><div class="growth-chat-actions"><span>只会参考当前浏览器里的练习记录</span><button class="info-primary-button" type="submit" ${this.chatBusy ? 'disabled' : ''}>${this.chatBusy ? '思考中…' : '发送提问'}</button></div></form>
-        <span class="growth-chat-settings">🔒 AI 服务由服务器安全提供</span>
+        <span class="growth-chat-settings">${window.accessController?.demoMode ? '🧩 当前使用本地练习反馈，不上传记录' : '🔒 AI 服务由服务器安全提供'}</span>
       </section>`;
     }
     async askGrowthCoach(form) {
@@ -1228,25 +1452,31 @@
     }
     renderHistory(history, adventure = [], expression = []) {
       if (!history.length && !adventure.length && !expression.length) return '<div class="info-empty"><span>🗂️</span><h3>还没有保存的练习</h3><p>完成一次朗读复述、自由表达或闯关主题，就能在这里找到它。</p></div>';
-      const readingCards = history.map(item => {
+      this.historyDetailMap = new Map();
+      const readingCards = history.map((item, index) => {
         const date = item.createdAt ? new Date(item.createdAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '刚刚';
-        return `<article class="history-card"><div class="history-card-head"><b>${escapeHtml(item.title || '朗读练习')}</b><time>${date}</time></div><p>${escapeHtml(item.recite || '没有识别到复述文字')}</p><small>匹配原文关键词 ${Number(item.matchedCount) || 0} 个</small>${item.analysis ? `<details class="history-report"><summary>查看 AI 小教练分析</summary><div>${escapeHtml(item.analysis).replace(/\n/g, '<br>')}</div></details>` : ''}</article>`;
+        const key = this.registerHistoryDetail('reading', item, index);
+        return `<button type="button" class="history-card history-card-button" data-history-detail="${key}"><div class="history-card-head"><b>${escapeHtml(item.title || '朗读练习')}</b><time>${date}</time></div><p>${escapeHtml(punctuateHistoryText(item.recite) || '没有识别到复述文字')}</p><small>匹配原文关键词 ${Number(item.matchedCount) || 0} 个 · 点击查看详情</small></button>`;
       }).join('');
-      const adventureCards = adventure.map(item => {
+      const adventureCards = adventure.map((item, index) => {
         const date = item.createdAt ? new Date(item.createdAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '刚刚';
         const stars = '★'.repeat(Math.min(3, Number(item.stars) || 0)) + '☆'.repeat(Math.max(0, 3 - (Number(item.stars) || 0)));
-        return `<article class="history-card history-card-adventure"><div class="history-card-head"><b>${escapeHtml(item.island || '闯关')} · ${escapeHtml(item.topic || '表达主题')}</b><time>${date}</time></div><p>${escapeHtml(item.story || '完成了一次情绪和故事表达')}</p><small>${stars} · 情绪词：${escapeHtml((item.emotions || []).join('、'))}</small></article>`;
+        const reportNote = item.report ? '已保存儿童版 AI 分析' : '已保存闯关内容，分析稍后补充';
+        const key = this.registerHistoryDetail('adventure', item, index);
+        return `<button type="button" class="history-card history-card-adventure history-card-button" data-history-detail="${key}"><div class="history-card-head"><b>${escapeHtml(item.island || '闯关')} · ${escapeHtml(item.topic || '表达主题')}</b><time>${date}</time></div><p>${escapeHtml(punctuateHistoryText(item.story) || '完成了一次情绪和故事表达')}</p><small>${stars} · 情绪词：${escapeHtml((item.emotions || []).join('、'))} · ${reportNote} · 点击查看详情</small></button>`;
       }).join('');
-      const expressionCards = expression.map(item => {
+      const expressionCards = expression.map((item, index) => {
         const date = item.createdAt ? new Date(item.createdAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '刚刚';
         const reportNote = item.report ? '已保存儿童版 AI 分析' : '已保存口述内容，分析稍后补充';
-        return `<article class="history-card history-card-expression"><div class="history-card-head"><b>${escapeHtml(item.title || '自由表达练习')}</b><time>${date}</time></div><p>${escapeHtml(item.text || '没有识别到口述内容')}</p><small>${reportNote} · ${Number(item.totalWords) || 0} 字 · 说清楚度 ${Number(item.density) || 0}%</small>${item.report ? `<details class="history-report"><summary>查看 AI 小教练分析</summary><div>${escapeHtml(item.report).replace(/\n/g, '<br>')}</div></details>` : ''}</article>`;
+        const key = this.registerHistoryDetail('expression', item, index);
+        return `<button type="button" class="history-card history-card-expression history-card-button" data-history-detail="${key}"><div class="history-card-head"><b>${escapeHtml(item.title || '自由表达练习')}</b><time>${date}</time></div><p>${escapeHtml(punctuateHistoryText(item.text) || '没有识别到口述内容')}</p><small>${reportNote} · ${Number(item.totalWords) || 0} 字 · 说清楚度 ${Number(item.density) || 0}% · 点击查看详情</small></button>`;
       }).join('');
       return `<div class="info-intro"><span>最近完成 ${history.length + adventure.length + expression.length} 次</span><button class="info-text-button" data-info-nav="growth">查看成长档案 →</button></div><div class="history-list">${expressionCards}${adventureCards}${readingCards}</div>`;
     }
     renderGrowth(history, adventure = []) {
       const stars = adventure.reduce((sum, item) => sum + (Number(item.stars) || 0), 0);
       const expression = this.readExpressionHistory();
+      this.historyDetailMap = new Map();
       const recent = [
         ...history.map(item => ({ ...item, _kind: 'reading' })),
         ...adventure.map(item => ({ ...item, _kind: 'adventure' })),
@@ -1256,15 +1486,19 @@
         const date = item.createdAt ? new Date(item.createdAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '刚刚';
         if (item._kind === 'adventure') {
           const starsText = '★'.repeat(Math.min(3, Number(item.stars) || 0)) + '☆'.repeat(Math.max(0, 3 - (Number(item.stars) || 0)));
-          return `<article class="history-card history-card-adventure"><div class="history-card-head"><b>${escapeHtml(item.island || '闯关')} · ${escapeHtml(item.topic || '表达主题')}</b><time>${date}</time></div><p>${escapeHtml(item.story || '完成了一次情绪和故事表达')}</p><small>${starsText} · 情绪词：${escapeHtml((item.emotions || []).join('、'))}</small></article>`;
+          const reportNote = item.report ? '已保存儿童版 AI 分析' : '已保存闯关内容，分析稍后补充';
+          const key = this.registerHistoryDetail('adventure', item, recent.indexOf(item));
+          return `<button type="button" class="history-card history-card-adventure history-card-button" data-history-detail="${key}"><div class="history-card-head"><b>${escapeHtml(item.island || '闯关')} · ${escapeHtml(item.topic || '表达主题')}</b><time>${date}</time></div><p>${escapeHtml(punctuateHistoryText(item.story) || '完成了一次情绪和故事表达')}</p><small>${starsText} · 情绪词：${escapeHtml((item.emotions || []).join('、'))} · ${reportNote} · 点击查看详情</small></button>`;
         }
         if (item._kind === 'expression') {
-          return `<article class="history-card history-card-expression"><div class="history-card-head"><b>${escapeHtml(item.title || '自由表达练习')}</b><time>${date}</time></div><p>${escapeHtml(item.text || '没有识别到口述内容')}</p><small>已保存 AI 分析 · ${Number(item.totalWords) || 0} 字 · 说清楚度 ${Number(item.density) || 0}%</small></article>`;
+          const key = this.registerHistoryDetail('expression', item, recent.indexOf(item));
+          return `<button type="button" class="history-card history-card-expression history-card-button" data-history-detail="${key}"><div class="history-card-head"><b>${escapeHtml(item.title || '自由表达练习')}</b><time>${date}</time></div><p>${escapeHtml(punctuateHistoryText(item.text) || '没有识别到口述内容')}</p><small>已保存 AI 分析 · ${Number(item.totalWords) || 0} 字 · 说清楚度 ${Number(item.density) || 0}% · 点击查看详情</small></button>`;
         }
-        return `<article class="history-card"><div class="history-card-head"><b>${escapeHtml(item.title || '朗读练习')}</b><time>${date}</time></div><p>${escapeHtml(item.recite || '没有识别到复述文字')}</p><small>匹配原文关键词 ${Number(item.matchedCount) || 0} 个</small></article>`;
+        const key = this.registerHistoryDetail('reading', item, recent.indexOf(item));
+        return `<button type="button" class="history-card history-card-button" data-history-detail="${key}"><div class="history-card-head"><b>${escapeHtml(item.title || '朗读练习')}</b><time>${date}</time></div><p>${escapeHtml(punctuateHistoryText(item.recite) || '没有识别到复述文字')}</p><small>匹配原文关键词 ${Number(item.matchedCount) || 0} 个 · 点击查看详情</small></button>`;
       }).join('');
       const historySection = recent.length
-        ? `<section class="growth-history"><div class="growth-history-head"><h4>历史记录</h4><span class="growth-history-count">共 ${recent.length} 次</span></div><div class="history-list">${recentCards}</div></section>`
+        ? `<section class="growth-history"><div class="growth-history-head"><h4>历史记录</h4><div class="growth-history-actions"><span class="growth-history-count">共 ${recent.length} 次</span><button type="button" class="history-toggle-arrow" data-history-toggle aria-label="${this.historyExpanded ? '收起历史记录' : '展开历史记录'}" aria-expanded="${this.historyExpanded}">${this.historyExpanded ? '▾' : '▸'}</button></div></div>${this.historyExpanded ? `<div class="history-list">${recentCards}</div>` : ''}</section>`
         : '<div class="growth-history-empty">完成一次练习后，历史记录会出现在这里。</div>';
       return `<div class="growth-hero"><span class="growth-medal">🏅</span><div><h3>你已经完成 ${history.length + adventure.length + expression.length} 次练习</h3><p>每一次开口，都是表达力的一点点升级。</p></div></div><div class="growth-stats"><div><b>${history.length}</b><span>朗读复述</span></div><div><b>${adventure.length}</b><span>闯关主题</span></div><div><b>${expression.length}</b><span>自由表达</span></div></div>${historySection}${this.renderGrowthChat(history, adventure, expression)}<div class="info-tip"><b>下一步小目标</b><p>闯关时说清楚一件小事，再加上你的真实感受。完成记录会自动保存在这里。</p></div>`;
     }

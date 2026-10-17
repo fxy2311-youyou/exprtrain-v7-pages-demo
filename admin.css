@@ -29,6 +29,15 @@ button { cursor:pointer; }
 .admin-summary > div { padding:16px 10px; text-align:center; background:var(--cream); border:3px solid var(--ink); box-shadow:5px 5px 0 var(--ink); }
 .admin-summary strong { display:block; color:var(--pink); font-size:30px; line-height:1; }
 .admin-summary span { display:block; margin-top:8px; color:var(--deep); font-size:12px; font-weight:900; }
+.admin-ai-card { margin:0 0 18px; }
+.admin-ai-status { display:inline-flex; align-items:center; min-height:28px; padding:5px 10px; color:var(--deep); background:#e8f5d9; border:2px solid #5b9b48; font-size:12px; font-weight:900; }
+.admin-ai-status.is-empty { color:#7b4e00; background:#fff2bd; border-color:#d6a72c; }
+.admin-config-form { grid-template-columns: minmax(0,1fr) minmax(0,1fr); column-gap:14px; align-items:end; }
+.admin-config-form label { grid-column:span 1; }
+.admin-config-form input { grid-column:span 1; }
+.admin-config-actions { grid-column:1/-1; display:flex; gap:10px; flex-wrap:wrap; }
+.admin-config-actions button { margin-top:12px; }
+.admin-ai-meta { margin:8px 0 0; color:#6c7890 !important; font-size:12px; }
 .admin-grid { display:grid; grid-template-columns:minmax(0,1.7fr) minmax(280px,.8fr); gap:18px; }
 .admin-card-heading { display:flex; justify-content:space-between; }
 .admin-account-list { display:grid; gap:8px; max-height:560px; overflow:auto; }
@@ -36,4 +45,4 @@ button { cursor:pointer; }
 .admin-account-row strong { display:block; }
 .admin-account-row span { display:block; color:#6c7890; font-size:11px; line-height:1.5; }
 .admin-account-row b { color:var(--pink); font-size:17px; }
-@media (max-width:760px) { .admin-header,.admin-toolbar { display:block; } .admin-header-actions { margin-top:18px; } .admin-summary { grid-template-columns:repeat(2,1fr); } .admin-grid { grid-template-columns:1fr; } .admin-account-row { grid-template-columns:1fr 1fr 1fr; } .admin-account-row > :first-child,.admin-account-row > :last-child { grid-column:1/-1; } }
+@media (max-width:760px) { .admin-header,.admin-toolbar { display:block; } .admin-header-actions { margin-top:18px; } .admin-summary { grid-template-columns:repeat(2,1fr); } .admin-grid { grid-template-columns:1fr; } .admin-account-row { grid-template-columns:1fr 1fr 1fr; } .admin-account-row > :first-child,.admin-account-row > :last-child { grid-column:1/-1; } .admin-config-form { grid-template-columns:1fr; } .admin-config-form label,.admin-config-form input { grid-column:1; } }

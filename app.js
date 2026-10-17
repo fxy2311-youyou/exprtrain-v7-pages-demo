@@ -59,6 +59,15 @@ function getVagueToPrecise() { return getLang() === 'en' ? VAGUE_TO_PRECISE_EN :
 const FILLER_WORDS = FILLER_WORDS_ZH;
 const HEDGE_WORDS = HEDGE_WORDS_ZH;
 
+function punctuateHistoryText(value) {
+  return String(value || '')
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => /[。！？；：]$/.test(line) ? line : `${line}。`)
+    .join('\n');
+}
+
 const VAGUE_TO_PRECISE_ZH = {
   '开心': ['欣喜', '雀跃', '兴奋', '欣慰', '畅快', '满足'],
   '难过': ['心酸', '失落', '委屈', '心疼', '沮丧', '低落'],
@@ -256,6 +265,34 @@ ${fullText}
 
 数据:${stats.duration}秒 | ${stats.totalWords}字 | 填充词${stats.fillers}次 | 犹豫词${stats.hedges}次 | 笼统词${stats.vagueWords}次`;
 
+  return { system, user };
+}
+
+function getAdventureReportPrompt(story, topic, emotions, stats) {
+  const emotionText = Array.isArray(emotions) && emotions.length ? emotions.join('、') : '未填写';
+  const system = [
+    '你是7到12岁儿童的中文表达成长教练。请用温暖、具体、孩子听得懂的话，分析孩子在闯关主题里的小故事。不要用成人培训、心理咨询或考试评分口吻，也不要要求背稿。',
+    '',
+    '请严格按下面结构输出 Markdown：',
+    '',
+    '## 🌟 你已经做到',
+    '用2到3条短句，指出孩子已经说清楚的事情、顺序、画面或感受。',
+    '',
+    '## 🧩 把故事说完整',
+    '只挑最需要补的一处，用一个小问题引导孩子补充“发生了什么—为什么—后来怎样”，不要替孩子写答案。',
+    '',
+    '## 🎨 让词语更具体',
+    '只从孩子实际说过的词里挑选情绪词、动作词、画面词或原因结果词，最多给3个更具体的说法；没有合适词就写“这部分已经很具体”。',
+    '',
+    '## 🗣️ 下一关练一小步',
+    '给一个3分钟以内的小练习，围绕“事情→原因→结果→感受”再说一遍。',
+    '',
+    '## ✅ 给孩子的一句话',
+    '用一句不超过20字的话鼓励孩子收尾。',
+    '',
+    '要求：全文使用中文短句，不虚构孩子没有说过的内容，先鼓励，再给一个最小可行动的下一步。'
+  ].join('\n');
+  const user = `闯关主题：${topic || '一件小事'}\n孩子选出的情绪词：${emotionText}\n孩子说的故事：\n---\n${story}\n---\n本次小数据：${stats.duration}秒 | ${stats.totalWords}字 | 填充词${stats.fillers}次 | 犹豫词${stats.hedges}次 | 笼统词${stats.vagueWords}次`;
   return { system, user };
 }
 
@@ -658,6 +695,8 @@ class ExpressionTrainer {
   // ===== 录制控制 (Web Speech API) =====
   startRecording() {
     if (!window.accessController.authorizedRecording) return;
+    this.adventureReportContext = null;
+    this.adventureReportValue = '';
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       window.accessController.recordingEnded();
@@ -1076,6 +1115,16 @@ class ExpressionTrainer {
 
   // ===== 报告 =====
   async generateReport() {
+    if (this.adventureReportContext) {
+      const reportTitle = document.querySelector('#report-modal .modal-header h2');
+      if (reportTitle) reportTitle.textContent = '📋 闯关表达分析';
+      if (this.adventureReportValue) {
+        this.reportModal.classList.remove('hidden');
+        this.renderReport(this.adventureReportValue);
+        return this.adventureReportValue;
+      }
+      return this.generateAdventureReport(this.adventureReportContext);
+    }
     const hasTranscript = Boolean(this.fullText.trim());
     if (!hasTranscript && !this.lastRecordingWasFree) return;
     const canUseAI = hasTranscript && window.accessController.canAnalyze(this.pastedText);
@@ -1085,6 +1134,8 @@ class ExpressionTrainer {
     }
     if (this.generatingReport) return;
     this.generatingReport = true;
+    const reportTitle = document.querySelector('#report-modal .modal-header h2');
+    if (reportTitle) reportTitle.textContent = '📋 表达分析报告';
     this.reportBody.innerHTML = '<p style="text-align:center;color:#6c5b70;padding:40px;">正在整理你的表达，一会儿就好…</p>';
     this.reportModal.classList.remove('hidden');
     track('report_generate');
@@ -1124,6 +1175,42 @@ class ExpressionTrainer {
     } else {
       this.reportBody.textContent = window.accessController.lastError || '生成失败，请稍后重试。';
     }
+  }
+
+  async generateAdventureReport({ story, topic = '', island = '', emotions = [], stars = 0, historyId = '', onComplete } = {}) {
+    const text = String(story || '').trim();
+    if (!text || !this.reportModal || !this.reportBody) return '';
+    const analysis = analyzeText(text) || { totalWords: text.length, fillers: [], hedges: [], vagueWords: [], density: 100 };
+    const stats = { duration: 0, totalWords: analysis.totalWords, fillers: analysis.fillers?.length || 0, hedges: analysis.hedges?.length || 0, vagueWords: analysis.vagueWords?.length || 0 };
+    const reportTitle = document.querySelector('#report-modal .modal-header h2');
+    if (reportTitle) reportTitle.textContent = '📋 闯关表达分析';
+    this.generatingReport = true;
+    this.reportBody.innerHTML = '<p style="text-align:center;color:#6c5b70;padding:40px;">正在整理你的闯关表达，一会儿就好…</p>';
+    this.reportModal.classList.remove('hidden');
+    const complete = report => {
+      const value = String(report || '').trim();
+      this.generatingReport = false;
+      if (value) {
+        this.lastReport = value;
+        this.adventureReportValue = value;
+        this.renderReport(value);
+        reportToBackend('/api/session', { recordingId: historyId || `adventure-${Date.now()}`, duration: stats.duration, totalWords: stats.totalWords, fillers: stats.fillers, hedges: stats.hedges, vagueWords: stats.vagueWords, density: `${analysis.density ?? 100}%`, fullText: text.slice(0, 5000), report: value.slice(0, 10000) });
+        onComplete?.(value);
+      }
+      return value;
+    };
+    const canUseAI = Boolean(window.accessController?.canAnalyze?.(false));
+    if (!canUseAI) return complete(this.buildAdventureChildReport(text, topic, emotions, stats, stars));
+    const prompt = getAdventureReportPrompt(text, `${island ? `${island} · ` : ''}${topic}`, emotions, stats);
+    const result = await callAI([{ role: 'system', content: prompt.system }, { role: 'user', content: prompt.user }], 4096);
+    return complete(result || this.buildAdventureChildReport(text, topic, emotions, stats, stars));
+  }
+
+  buildAdventureChildReport(text, topic, emotions, stats, stars = 0) {
+    const ending = /(后来|结果|最后|于是|因此)/.test(text) ? '你有说到后来怎样，故事的顺序已经很清楚。' : '下次可以补一句“后来怎么样”，让故事有一个结尾。';
+    const detail = /(看见|看到|听见|听到|当时|那一刻|突然|画面|动作|在)/.test(text) ? '你说到了具体的画面或动作，听的人更容易想象。' : '下次加一个具体瞬间、动作或画面，别人会更容易听懂。';
+    const feeling = emotions?.length || /(开心|自豪|委屈|难过|紧张|害羞|惊喜|生气|期待|担心|感到)/.test(text);
+    return `## 🌟 你已经做到\n- 你完成了“${topic || '一件小事'}”这一关，愿意把真实经历说出来。\n- ${ending}\n- ${detail}\n\n## 🧩 把故事说完整\n下次再问自己一次：这件事为什么会这样？后来结果怎样？\n\n## 🎨 让词语更具体\n${feeling ? `你用到了“${(emotions || []).join('、') || '自己的感受'}”，这让故事更像你。` : '下次可以说说当时的感受，让听的人更了解你。'}\n\n## 🗣️ 下一关练一小步\n用3分钟再说一遍：先讲事情，再讲原因，最后补上结果和感受。\n\n## 📌 本关小数据\n完成星级：${stars}/3　说了多少字：${stats.totalWords} 字\n\n## ✅ 给孩子的一句话\n你已经把一件小事讲出来了，下一关再加一个具体瞬间。`;
   }
 
   buildLocalChildReport() {
@@ -1188,7 +1275,7 @@ ${feelingHint}
     const entry = {
       id: this.recordingId,
       title: this.recordingTopic ? `自由表达 · ${this.recordingTopic}` : '自由表达练习',
-      text: this.fullText.trim(),
+      text: punctuateHistoryText(this.fullText.trim()),
       report: (report || this.lastReport || '').slice(0, 12000),
       duration: this.stats.duration,
       totalWords: this.stats.totalWords,
@@ -1242,7 +1329,9 @@ ${feelingHint}
   }
 
   copyReport() {
-    const reportText = this.reportBody.innerText;
+    const original = String(this.fullText || '').trim() || '（本次没有识别到原文）';
+    const analysis = String(this.reportBody?.innerText || '').trim() || '（暂无表达分析）';
+    const reportText = `【原文】\n${original}\n\n【表达分析】\n${analysis}`;
     navigator.clipboard.writeText(reportText).then(() => {
       const btn = document.getElementById('btn-copy-report');
       btn.textContent = '✅ 已复制';

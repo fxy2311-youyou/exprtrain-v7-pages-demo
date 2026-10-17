@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>表达宇宙·达达口才训练 · 管理员中心</title>
   <meta name="theme-color" content="#1260b5">
-  <link rel="stylesheet" href="/admin.css?v=20261015-v7-2">
+  <link rel="stylesheet" href="/admin.css?v=20261016-v9">
 </head>
 <body>
   <main class="admin-shell">
@@ -31,12 +31,24 @@
       <div class="admin-summary">
         <div><strong id="admin-total-users">—</strong><span>全部账号</span></div><div><strong id="admin-active-users">—</strong><span>正常账号</span></div><div><strong id="admin-completed-sessions">—</strong><span>完成练习</span></div><div><strong id="admin-total-minutes">—</strong><span>练习分钟</span></div><div><strong id="admin-report-count">—</strong><span>AI 分析</span></div>
       </div>
+      <section class="admin-card admin-ai-card">
+        <div class="admin-card-heading"><div><span class="admin-kicker">AI SERVICE</span><h2>AI 服务配置</h2></div><span id="admin-ai-status" class="admin-ai-status">正在读取…</span></div>
+        <p>只允许管理员修改。完整 API Key 不会再次显示，保存前会先测试连接。</p>
+        <form id="admin-ai-config-form" class="admin-form admin-config-form">
+          <label for="admin-ai-endpoint">API 服务器地址</label><input id="admin-ai-endpoint" type="url" required placeholder="https://api.deepseek.com">
+          <label for="admin-ai-key">新的 API Key</label><input id="admin-ai-key" type="password" autocomplete="new-password" placeholder="留空表示继续使用当前 Key">
+          <div class="admin-config-actions"><button class="admin-primary" type="submit">验证并保存</button><button id="admin-ai-clear" class="admin-secondary" type="button">清除 Key</button></div>
+        </form>
+        <p id="admin-ai-message" class="admin-message" role="status" aria-live="polite"></p>
+        <p id="admin-ai-meta" class="admin-ai-meta"></p>
+      </section>
       <div class="admin-grid">
         <section class="admin-card"><div class="admin-card-heading"><div><span class="admin-kicker">ACCOUNTS</span><h2>账号列表</h2></div></div><div id="admin-account-list" class="admin-account-list"></div></section>
         <section class="admin-card"><span class="admin-kicker">NEW ACCOUNT</span><h2>创建账号</h2><p>给用户分配手机号、用户名和初始密码。</p><form id="admin-account-form" class="admin-form"><label for="admin-account-phone">手机号</label><input id="admin-account-phone" type="tel" inputmode="tel" required placeholder="例如 13800138000"><label for="admin-account-username">用户名</label><input id="admin-account-username" type="text" maxlength="20" placeholder="可选，2—20 个字"><label for="admin-account-password">初始密码</label><input id="admin-account-password" type="password" minlength="8" required placeholder="至少 8 位"><label for="admin-account-role">账号类型</label><select id="admin-account-role"><option value="user">普通用户</option><option value="admin">管理员</option></select><button class="admin-primary" type="submit">创建账号</button></form><p id="admin-account-message" class="admin-message" role="status" aria-live="polite"></p></section>
       </div>
     </section>
   </main>
-  <script src="/admin.js?v=20261015-v7-2" defer></script>
+  <script src="/runtime-config.js?v=20261016-v9" defer></script>
+  <script src="/admin.js?v=20261016-v9" defer></script>
 </body>
 </html>

@@ -1,4 +1,6 @@
-/* 表达宇宙·达达口才训练 V7: all access paths share this controller. No provider key in source. */
+/* 表达宇宙·达达口才训练 V9: all access paths share this controller. No provider key in source. */
+const runtimeApiBase = String(window.EXPR_RUNTIME_CONFIG?.apiBaseUrl || '').replace(/\/+$/, '');
+const runtimeApiUrl = (path) => runtimeApiBase ? `${runtimeApiBase}${path}` : path;
 class AccessController {
   constructor() {
     this.dialog = document.getElementById('access-dialog');
@@ -23,6 +25,8 @@ class AccessController {
     this.authorizedRecording = false;
     this.busy = false;
     this.demoMode = window.EXPR_DEMO === true;
+    this.demoAccount = null;
+    this.demoSession = localStorage.getItem('expr_demo_session') === '1';
   }
   async init() {
     const recoveryId = this.sessionId;
@@ -38,16 +42,24 @@ class AccessController {
     if ($('admin-stats-close')) $('admin-stats-close').onclick = () => this.adminStatsDialog?.close();
     if ($('admin-stats-refresh')) $('admin-stats-refresh').onclick = () => this.refreshAdminStats();
     this.loginDialog.addEventListener('cancel', event => event.preventDefault());
+    // Bind this before the demo branch below. Static trial mode must keep the
+    // same close button behavior as the server-backed page.
+    $('access-close').onclick = () => this.close();
+    $('btn-access-manage').onclick = () => this.open('settings');
+    $('ai-connection-check')?.addEventListener('click', () => this.checkServerAIStatus());
+    this.dialog.addEventListener('cancel', event => { if (this.busy) event.preventDefault(); });
     if (this.demoMode) {
-      // GitHub Pages demo: keep the core practice loop usable without a
-      // server, account, database, or browser-side API key.
+      // GitHub Pages trial: require a local account while keeping the practice
+      // loop offline. The account never leaves this browser.
       this.config = { betaMode: true, managedBillingEnabled: false, serverAiAvailable: false, managedAvailable: false };
       this.mode = 'demo';
-      this.user = { username: '试用访客', phone: '静态试用版' };
-      this.authToken = 'demo';
+      this.demoAccount = this.readDemoAccount();
+      this.user = this.demoSession && this.demoAccount ? this.demoAccount : null;
+      this.authToken = this.user ? 'demo-local' : '';
       this.applyConfig();
       this.renderAccountStatus();
       this.updateStatus();
+      if (!this.user) this.openLogin();
       return;
     }
     if (this.authToken) {
@@ -56,9 +68,6 @@ class AccessController {
     }
     $('access-key').value = this.key;
     $('remember-key').checked = !!localStorage.getItem('expr_v3_key');
-    $('access-close').onclick = () => this.close();
-    this.dialog.addEventListener('cancel', event => { if (this.busy) event.preventDefault(); });
-    $('btn-access-manage').onclick = () => this.open('settings');
     $('toggle-key').onclick = () => {
       const visible = $('access-key').type === 'password';
       $('access-key').type = visible ? 'text' : 'password';
@@ -105,14 +114,14 @@ class AccessController {
   async api(path, body, options = {}) {
     let response;
     try {
-      response = await fetch(path, {
+      response = await fetch(runtimeApiUrl(path), {
         method: body === undefined ? 'GET' : 'POST',
         headers: { 'Content-Type': 'application/json', ...((this.authToken || this.token) ? { Authorization: `Bearer ${this.authToken || this.token}` } : {}) },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         signal: AbortSignal.timeout(path.includes('/ai/') ? 90000 : 20000),
         ...options
       });
-    } catch (_) { throw new Error('本地 V7-2 服务未启动，请先运行「启动V7预览.command」。'); }
+    } catch (_) { throw new Error('本地服务未启动，请先运行启动脚本。'); }
     let data;
     try { data = await response.json(); } catch (_) { throw new Error('服务暂时无法连接，请稍后重试。'); }
     if (!response.ok) throw new Error(data.message || '操作未完成，请稍后重试。');
@@ -120,17 +129,29 @@ class AccessController {
   }
   openLogin() {
     this.loginDialog?.classList.add('is-page');
+    const note = document.getElementById('login-note');
+    if (note && this.demoMode) {
+      note.textContent = this.readDemoAccount()
+        ? '请输入你在此浏览器注册的手机号和密码。'
+        : '第一次使用请先点“注册新账号”，账号只保存在当前浏览器。';
+    }
     if (!this.loginDialog?.open) this.loginDialog?.showModal();
     document.getElementById('login-phone')?.focus();
   }
   renderAccountStatus() {
     const badge = document.getElementById('account-status-badge');
     const copy = document.getElementById('account-status-copy');
+    const identity = document.getElementById('account-status-identity');
+    const username = document.getElementById('account-status-username');
+    const phone = document.getElementById('account-status-phone');
     const login = document.getElementById('btn-account-login');
     const logout = document.getElementById('btn-account-logout');
     const loggedIn = !!this.user;
     if (badge) { badge.textContent = loggedIn ? '已登录' : '未登录'; badge.classList.toggle('is-active', loggedIn); }
-    if (copy) copy.textContent = loggedIn ? `${this.user.username ? `${this.user.username} · ` : ''}${this.maskPhone(this.user.phone)} · 练习记录与成长档案已同步` : '登录后，练习记录、成长档案和 AI 分析会跟着账号保存。';
+    identity?.classList.toggle('hidden', !loggedIn);
+    if (username) username.textContent = loggedIn ? (this.user.username || '未设置昵称') : '';
+    if (phone) phone.textContent = loggedIn ? `手机号：${this.maskPhone(this.user.phone)}` : '';
+    if (copy) copy.textContent = loggedIn ? '练习记录与成长档案已同步。' : '登录后，练习记录、成长档案和 AI 分析会跟着账号保存。';
     login?.classList.toggle('hidden', loggedIn);
     logout?.classList.toggle('hidden', !loggedIn);
   }
@@ -138,7 +159,54 @@ class AccessController {
     const value = String(phone);
     return value.length >= 7 ? `${value.slice(0, 3)}****${value.slice(-4)}` : value;
   }
+  readDemoAccount() {
+    try {
+      const value = JSON.parse(localStorage.getItem('expr_demo_account') || 'null');
+      return value && value.phone && value.password ? value : null;
+    } catch (_) { return null; }
+  }
+  async loginDemo() {
+    const phone = document.getElementById('login-phone').value.trim();
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    const isRegister = this.loginMode === 'register';
+    const confirm = document.getElementById('login-confirm').value;
+    const message = document.getElementById('login-message');
+    const submit = document.getElementById('login-submit');
+    if (!phone || password.length < 8) { message.textContent = '请输入手机号和至少 8 位密码。'; message.classList.add('is-error'); return; }
+    if (isRegister && username && (username.length < 2 || username.length > 20)) { message.textContent = '用户名请使用 2—20 个字。'; message.classList.add('is-error'); return; }
+    if (isRegister && password !== confirm) { message.textContent = '两次输入的密码不一致。'; message.classList.add('is-error'); return; }
+    submit.disabled = true; message.classList.remove('is-error'); message.textContent = isRegister ? '正在创建账号…' : '正在登录…';
+    try {
+      const existing = this.readDemoAccount();
+      if (isRegister) {
+        if (existing?.phone === phone) throw new Error('这个手机号已经注册，请直接登录。');
+        this.demoAccount = { phone, username: username || `用户${phone.slice(-4)}`, password, role: 'user', status: 'active' };
+        localStorage.setItem('expr_demo_account', JSON.stringify(this.demoAccount));
+      } else {
+        if (!existing || existing.phone !== phone || existing.password !== password) throw new Error('手机号或密码不正确。');
+        this.demoAccount = existing;
+      }
+      this.user = { ...this.demoAccount };
+      this.authToken = 'demo-local'; this.demoSession = true;
+      localStorage.setItem('expr_demo_session', '1');
+      const pendingAction = this.pending;
+      this.loginDialog.close(); this.loginDialog.classList.remove('is-page');
+      this.updateAdminButton(); this.renderAccountStatus(); message.textContent = '';
+      this.updateStatus();
+      if (pendingAction === 'settings') this.open('settings');
+      else if (pendingAction) { this.pending = pendingAction; await this.continueAction(); }
+    } catch (error) { message.textContent = error.message; message.classList.add('is-error'); }
+    finally { submit.disabled = false; }
+  }
   async logout() {
+    if (this.demoMode) {
+      this.authToken = ''; this.user = null; this.demoSession = false;
+      localStorage.removeItem('expr_demo_session');
+      this.updateAdminButton(); this.renderAccountStatus(); this.updateStatus();
+      this.close(); this.openLogin();
+      return;
+    }
     try { if (this.authToken) await this.api('/api/auth/logout', {}); } catch (_) {}
     this.authToken = ''; this.user = null;
     localStorage.removeItem('expr_v7_auth_token');
@@ -147,33 +215,15 @@ class AccessController {
     if (this.loginMode === 'register') this.toggleLoginMode();
     this.openLogin();
   }
-  renderAccountStats(stats = null) {
-    const panel = document.getElementById('account-stats');
-    const message = document.getElementById('account-stats-message');
-    if (!panel || !message) return;
-    if (!this.user || !stats) {
-      panel.classList.add('hidden');
-      message.textContent = this.user ? '正在读取练习数据…' : '';
-      return;
-    }
-    panel.classList.remove('hidden');
-    message.textContent = stats.totalSessions ? '这些数据只属于当前账号，换设备登录后也会继续保留。' : '完成第一次练习后，这里会显示你的进步。';
-    document.getElementById('account-stat-sessions').textContent = String(stats.completedSessions);
-    document.getElementById('account-stat-minutes').textContent = String(Math.floor(stats.totalSeconds / 60));
-    document.getElementById('account-stat-reports').textContent = String(stats.reportCount);
-  }
-  async refreshAccountStats() {
-    if (!this.user) return this.renderAccountStats();
-    this.renderAccountStats();
-    try { this.renderAccountStats(await this.api('/api/account/stats')); }
-    catch (_) { document.getElementById('account-stats-message').textContent = '练习数据暂时无法读取，请稍后再试。'; }
-  }
   updateAdminButton() {
     const button = document.getElementById('btn-admin-accounts');
     if (button) button.classList.toggle('hidden', this.user?.role !== 'admin');
     const dashboard = document.getElementById('btn-admin-dashboard');
     if (dashboard) dashboard.classList.toggle('hidden', this.user?.role !== 'admin');
     this.renderAccountStatus();
+  }
+  async refreshAccountStats() {
+    // Practice totals belong in 成长档案; 账号设置只显示身份和登录状态.
   }
   openAdminAccounts() {
     if (this.user?.role !== 'admin') return;
@@ -227,6 +277,7 @@ class AccessController {
     finally { submit.disabled = false; }
   }
   async login() {
+    if (this.demoMode) return this.loginDemo();
     const phone = document.getElementById('login-phone').value.trim();
     const username = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
@@ -284,6 +335,7 @@ class AccessController {
   }
   applyConfig() {
     this.serverAiAvailable = this.config.serverAiAvailable === true;
+    this.setAIConnectionStatus(this.serverAiAvailable ? '已配置，待检查' : '未配置', this.serverAiAvailable ? 'pending' : 'error');
     const betaMode = this.config.betaMode === true;
     document.getElementById('login-register')?.classList.toggle('hidden', !betaMode);
     if (!betaMode && this.loginMode === 'register') this.toggleLoginMode();
@@ -371,8 +423,10 @@ class AccessController {
     if (this.demoMode) {
       this.pending = action;
       this.pasted = pasted;
+      if (!this.user) { this.openLogin(); return; }
       if (action === 'settings') {
         this.renderAccountStatus();
+        this.checkServerAIStatus({ silent: true });
         document.getElementById('account-settings-section')?.classList.remove('hidden');
         this.dialog.showModal();
         return;
@@ -398,7 +452,7 @@ class AccessController {
     document.getElementById('access-title').textContent = action === 'settings' ? '账号设置' : '开始练习';
     document.getElementById('account-settings-section')?.classList.toggle('hidden', action !== 'settings');
     this.renderAccountStatus();
-    if (action === 'settings') this.refreshAccountStats();
+    if (action === 'settings') this.checkServerAIStatus({ silent: true });
     document.getElementById('key-submit').textContent = action === 'setup' ? '验证并保存' : action === 'record' ? '验证并开始' : action === 'report' ? '验证并生成报告' : '验证并保存';
     document.getElementById('managed-start').textContent = action === 'record' ? '开始录制' : '使用练习套餐';
     document.getElementById('access-key').value = this.key;
@@ -411,6 +465,31 @@ class AccessController {
     this.dialog.showModal();
     this.refreshConfig();
     if (this.token) this.refreshAccount();
+  }
+  setAIConnectionStatus(text, state = 'pending') {
+    const node = document.getElementById('ai-connection-status');
+    if (!node) return;
+    node.textContent = text;
+    node.classList.remove('is-pending', 'is-ok', 'is-error');
+    node.classList.add('is-' + state);
+  }
+  async checkServerAIStatus(options = {}) {
+    if (this.demoMode) {
+      this.setAIConnectionStatus('本地练习反馈', 'ok');
+      return { connected: true, demo: true };
+    }
+    this.setAIConnectionStatus('检查中…', 'pending');
+    try {
+      const status = await this.api('/api/ai/status');
+      if (status.connected) this.setAIConnectionStatus('已连接', 'ok');
+      else if (status.configured) this.setAIConnectionStatus('服务未连通', 'error');
+      else this.setAIConnectionStatus('未配置', 'error');
+      return status;
+    } catch (error) {
+      this.setAIConnectionStatus('检查失败', 'error');
+      if (!options.silent) this.message(error.message || '暂时无法检查 AI 连接。', true);
+      return { connected: false };
+    }
   }
   close() {
     if (!this.busy) { this.pending = null; this.dialog.close(); }
@@ -484,6 +563,7 @@ class AccessController {
     }
   }
   canAnalyze(pasted = false) {
+    if (this.mode === 'demo') return !pasted;
     if (this.mode === 'server') return this.serverAiAvailable && !pasted;
     return this.mode === 'byok' ? !!this.key : !!this.token && !!this.sessionId && !pasted;
   }
@@ -557,8 +637,11 @@ class AccessController {
       const text = messages.filter(item => item?.role === 'user').at(-1)?.content || '';
       const hasDetail = /(看见|看到|听见|听到|当时|那一刻|突然|画面|动作|后来|结果|最后)/.test(text);
       if (maxTokens > 1000) {
-        return `这是一份静态试用反馈：\n\n你已经把想法说出来了。${hasDetail ? '你提到了具体的画面或过程，听的人更容易跟上。' : '下次可以加一个具体瞬间、动作或画面。'}\n\n继续练习“事情发生了什么 → 你的感受 → 后来怎么样”，表达会越来越清楚。`;
+        return `这是一份练习反馈：\n\n你已经把想法说出来了。${hasDetail ? '你提到了具体的画面或过程，听的人更容易跟上。' : '下次可以加一个具体瞬间、动作或画面。'}\n\n继续练习“事情发生了什么 → 你的感受 → 后来怎么样”，表达会越来越清楚。`;
       }
+      if (/最近|进步|变化/.test(text)) return '你已经开始把事情说出来了。继续留意“发生了什么、后来怎样”，再加一个具体的动作或画面，听的人就更容易跟上。';
+      if (/下一次|下次|练什么/.test(text)) return '下一次先练一件小事：按“事情 → 原因 → 结果 → 感受”说一遍，最后补一个具体瞬间。';
+      if (/哪次|最好|完整/.test(text)) return '可以回看你说到具体人物、动作和结果的那一次。能让别人脑中出现画面，就是很棒的进步。';
       return hasDetail ? '你说到了具体细节，继续补充结果或感受。' : '可以加一个具体瞬间、动作或画面。';
     }
     if (mode === 'server') {

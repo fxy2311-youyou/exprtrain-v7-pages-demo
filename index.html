@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>表达宇宙·达达口才训练 · V7-2</title>
+  <title>表达宇宙·达达口才训练</title>
   <meta name="description" content="给 7—12 岁孩子的实时表达练习空间">
   <meta name="theme-color" content="#FFF9ED">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20261014-v7-2">
+  <link rel="stylesheet" href="style.css?v=20261016-v9">
   <link rel="stylesheet" href="demo.css">
 </head>
 <body>
@@ -18,7 +18,7 @@
     <!-- 左栏：表达分析 -->
     <aside class="panel-left" id="panel-left">
       <div class="panel-title">📊 表达分析</div>
-      <p class="panel-helper">你说出的具体词语会亮起来：感受、动作、画面和顺序都能被看见。</p>
+      <p class="panel-helper">情绪词=感受；动作词=做了什么；画面词=时间、地点、样子；顺序词=先后关系。</p>
       <div class="stat-row">
         <span class="stat-label stat-label-emotion">情绪词</span>
         <span id="stat-emotion" class="stat-value stat-pink">0</span>
@@ -49,7 +49,7 @@
     <main class="main-area">
       <!-- 顶部栏 -->
       <div class="topbar">
-        <div class="topbar-title-group"><button id="topbar-back" class="topbar-back hidden" type="button">← 返回</button><span class="app-title">表达宇宙·达达口才训练 <span class="version-tag">V7-2</span></span></div>
+        <div class="topbar-title-group"><button id="topbar-back" class="topbar-back hidden" type="button">← 返回</button><span class="app-title">表达宇宙·达达口才训练</span></div>
         <div class="topbar-right">
           <span id="timer" class="timer">00:00</span>
           <button id="btn-lang-toggle" class="btn-icon" title="切换中/英" style="font-size:12px;font-weight:700;background:#222;border:1px solid #E5007E;border-radius:4px;padding:2px 6px;color:#E5007E;">ZH</button>
@@ -62,7 +62,7 @@
       <section class="kids-home" id="kids-home" aria-label="表达探险岛首页">
         <div class="kids-hero">
           <div>
-            <p class="eyebrow"><span class="spark-dot"></span> EXPRESS COURT · 表达宇宙·达达 V7-2</p>
+            <p class="eyebrow"><span class="spark-dot"></span> EXPRESS COURT · 表达宇宙·达达</p>
             <h1>把你想说的，<br>打到空中。</h1>
             <p class="hero-copy">像接住一个球一样，把事情、感觉和想法接起来。今天选一个入口，开口说 3 分钟。</p>
           </div>
@@ -93,7 +93,7 @@
               <div id="adventure-emotion-slots" class="adventure-emotion-slots"><span>词语 1</span><span>词语 2</span><span>词语 3</span></div>
               <div class="adventure-word-input"><input id="adventure-emotion-input" type="text" placeholder="说完后也可以在这里补充，例如：开心、自豪、激动"><button id="adventure-emotion-mic" type="button">🎤 开始说词语</button></div>
               <div id="adventure-emotion-hints" class="adventure-hints" hidden><span>想不到时可以想想：</span><button type="button" data-quest-word="开心">开心</button><button type="button" data-quest-word="自豪">自豪</button><button type="button" data-quest-word="紧张">紧张</button><button type="button" data-quest-word="委屈">委屈</button><button type="button" data-quest-word="惊喜">惊喜</button></div>
-              <button id="adventure-emotion-submit" class="adventure-primary" type="button">我说好了，检查一下</button>
+              <button id="adventure-emotion-submit" class="adventure-primary" type="button">至少说一个，就可以继续</button>
             </div>
             <div id="adventure-story-stage" class="adventure-story-stage" hidden>
               <div class="adventure-picked-words"><span>刚刚的情绪词</span><b id="adventure-picked-word-text"></b></div>
@@ -122,17 +122,17 @@
         <div class="reading-page-back"><button id="reading-back" class="reading-back" type="button">← 返回首页</button></div>
         <div class="reading-header">
           <div>
-            <span class="section-kicker">输入积累</span>
-            <h2>选一篇，跟着读起来</h2>
-            <p>跟着文字读一遍，再用自己的话说出两件事。</p>
+            <span class="section-kicker">原版文章案例库</span>
+            <h2>先看案例，再开始练习</h2>
+            <p>这里保留原版文章，也可以直接添加家长想让孩子练习的素材。</p>
           </div>
-          <div class="reading-header-actions"><button id="reading-add-material" class="reading-add-material" type="button">＋ 添加我的素材</button></div>
+          <div class="reading-header-actions"><button id="reading-add-material" class="reading-add-material" type="button">＋ 家长添加素材</button></div>
         </div>
         <div id="reading-custom-form" class="reading-custom-form" hidden>
           <div class="reading-custom-heading"><div><span class="section-kicker">我的输入</span><h3>把一段文字放进来练习</h3></div><button id="reading-custom-close" class="reading-change" type="button">收起</button></div>
           <textarea id="reading-custom-text" rows="5" placeholder="粘贴一段你想练习的文字，保存后会直接显示在文章页面。"></textarea>
           <div class="reading-custom-actions"><input id="reading-custom-title" type="text" maxlength="30" placeholder="给这段文字起个标题（可选）"><button id="reading-custom-save" class="reading-primary" type="button">显示到朗读列表</button></div>
-          <p id="reading-custom-status" class="reading-custom-status">建议 50—150 字，方便一次练习完成。</p>
+          <p id="reading-custom-status" class="reading-custom-status">家长可以直接粘贴想练的原文，保存后会自动加拼音。</p>
         </div>
         <div id="reading-library" class="reading-library" aria-label="朗读文章列表"></div>
         <div id="reading-player" class="reading-player" hidden>
@@ -212,6 +212,14 @@
           <button id="kids-info-close" class="access-close" aria-label="关闭" type="button">×</button>
         </div>
         <div id="kids-info-body" class="kids-info-body"></div>
+      </dialog>
+
+      <dialog id="history-detail-dialog" class="history-detail-dialog" aria-labelledby="history-detail-title">
+        <div class="kids-info-heading">
+          <div><span class="section-kicker">练习回看</span><h2 id="history-detail-title">历史记录详情</h2></div>
+          <button id="history-detail-close" class="access-close" aria-label="关闭" type="button">×</button>
+        </div>
+        <div id="history-detail-body" class="history-detail-body"></div>
       </dialog>
 
       <section id="free-expression-hub" class="free-expression-hub" hidden aria-label="自由表达练习">
@@ -340,10 +348,9 @@
   <!-- 水印 + 打赏 -->
   <div class="watermark" id="watermark">表达宇宙·达达口才训练 by sisi</div>
 
-  <!-- V7-2 账号登录：测试版支持手机号自助注册，手机号用于识别用户和同步练习记录 -->
+  <!-- 账号登录：手机号用于识别用户和同步练习记录 -->
   <dialog id="login-dialog" class="login-dialog" aria-labelledby="login-title">
     <div class="login-card">
-      <div class="login-badge">EXPRESS COURT · V7-2 测试版</div>
       <h1 id="login-title">登录表达宇宙·达达口才训练</h1>
       <p class="login-lead">注册或登录后，练习记录、成长档案和 AI 分析会跟着账号保存。</p>
       <form id="login-form">
@@ -376,14 +383,10 @@
     <section id="account-settings-section" class="account-settings-section hidden" aria-labelledby="account-settings-title">
       <div class="account-settings-topline"><span class="account-settings-kicker">账号状态</span><span id="account-status-badge" class="account-status-badge">未登录</span></div>
       <h2 id="account-settings-title">登录你的练习账号</h2>
+      <div id="account-status-identity" class="account-status-identity hidden" aria-live="polite"><strong id="account-status-username"></strong><span id="account-status-phone"></span></div>
       <p id="account-status-copy">登录后，练习记录、成长档案和 AI 分析会跟着账号保存。</p>
+      <div class="ai-connection-row" aria-live="polite"><span class="ai-connection-label">AI 服务连接</span><span id="ai-connection-status" class="connection-status is-pending">待检查</span><button id="ai-connection-check" type="button" class="text-action">检查连接</button></div>
       <div class="account-settings-actions"><button id="btn-account-login" type="button" class="access-primary">登录账号</button><button id="btn-account-logout" type="button" class="access-secondary hidden">退出登录</button></div>
-      <div id="account-stats" class="account-stats hidden" aria-live="polite">
-        <div class="account-stat"><strong id="account-stat-sessions">0</strong><span>完成练习</span></div>
-        <div class="account-stat"><strong id="account-stat-minutes">0</strong><span>练习分钟</span></div>
-        <div class="account-stat"><strong id="account-stat-reports">0</strong><span>AI 分析</span></div>
-      </div>
-      <p id="account-stats-message" class="account-stats-message"></p>
     </section>
     <div class="access-scroll">
       <section id="managed-section" class="managed-section" aria-labelledby="managed-title">
@@ -510,6 +513,7 @@
     </div>
   </div>
 
+  <script src="runtime-config.js"></script>
   <script src="data/child-lexicon.bundle.js"></script>
   <script src="pinyin-map.js"></script>
   <script src="demo-mode.js"></script>
